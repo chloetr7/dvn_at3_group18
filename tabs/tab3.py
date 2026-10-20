@@ -398,9 +398,7 @@ proportionally increasing compute.**
 
     st.dataframe(display_summary, use_container_width=True, hide_index=True)
 
-    # ------------------------------------------------------------------
-    # Traceability / verification
-    # ------------------------------------------------------------------
+
     with st.expander("Trace this chart's displayed values back to source"):
         st.markdown(
             "**Data lineage:** Epoch AI benchmark export → `raw_benchmarks.csv` "
@@ -477,9 +475,7 @@ proportionally increasing compute.**
             "(CC BY attribution)."
         )
 
-    # ------------------------------------------------------------------
-    # Interpretation, limitations and sources
-    # ------------------------------------------------------------------
+
     with st.expander("Interpretation, limitations and sources"):
         st.markdown(
             f"""
