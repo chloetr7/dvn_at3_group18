@@ -50,9 +50,9 @@ REQUIRED_COLUMNS = {
 }
 
 
-# --------------------------------------------------------------------------- #
+
 # Data
-# --------------------------------------------------------------------------- #
+
 def _find_data_path(filename: str) -> Optional[Path]:
     """Locate data/<filename> from the repo root, the tabs/ folder, or cwd."""
     here = Path(__file__).resolve().parent
@@ -104,9 +104,8 @@ def best_version_per_model(df: pd.DataFrame) -> pd.DataFrame:
     )
 
 
-# --------------------------------------------------------------------------- #
+
 # Analysis
-# --------------------------------------------------------------------------- #
 def compute_records(models: pd.DataFrame, level: float) -> pd.DataFrame:
     """Models that reach `level`, in release order, flagged when they set a new
     lowest-training-compute record for that level."""
@@ -157,9 +156,8 @@ def summary_table(models: pd.DataFrame, levels: list[int]) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-# --------------------------------------------------------------------------- #
 # Formatting
-# --------------------------------------------------------------------------- #
+
 _SUP = str.maketrans("0123456789-", "⁰¹²³⁴⁵⁶⁷⁸⁹⁻")
 
 
@@ -202,9 +200,8 @@ def _log_y_axis(fig: go.Figure, lo: float, hi: float, title: str) -> None:
     )
 
 
-# --------------------------------------------------------------------------- #
 # Charts
-# --------------------------------------------------------------------------- #
+
 def build_record_chart(models: pd.DataFrame, qualifying: pd.DataFrame, level: int) -> go.Figure:
     """Change over time: every model's compute by release date, with the falling
     'lowest compute to reach the level' line."""
@@ -304,9 +301,9 @@ def build_dumbbell(summary: pd.DataFrame) -> go.Figure:
     return fig
 
 
-# --------------------------------------------------------------------------- #
+
 # Verification
-# --------------------------------------------------------------------------- #
+
 def _trace_to_source(records: pd.DataFrame) -> None:
     choice = st.selectbox(
         "Pick a record-setting model to trace",
@@ -351,9 +348,9 @@ def _trace_to_source(records: pd.DataFrame) -> None:
         st.error("Mismatch between raw and displayed values. Do not present this number until it is checked.")
 
 
-# --------------------------------------------------------------------------- #
+
 # Page
-# --------------------------------------------------------------------------- #
+
 def display_tab4(df: Optional[pd.DataFrame] = None) -> None:
     st.header("User Story 3A · How much compute does a capability level need, and is it falling?")
     st.markdown(
@@ -384,7 +381,7 @@ def display_tab4(df: Optional[pd.DataFrame] = None) -> None:
         "Models without published training compute are excluded, not treated as zero."
     )
 
-    # ---- Controls -------------------------------------------------------- #
+    #  Controls
     c1, c2 = st.columns([3, 2])
     level = c1.slider("Capability level you need: minimum GPQA Diamond score (%)",
                       min_value=40, max_value=95, value=80, step=5, key="tab4_level",
@@ -403,7 +400,7 @@ def display_tab4(df: Optional[pd.DataFrame] = None) -> None:
     qualifying = compute_records(models, level)
     s = summarise_level(qualifying)
 
-    # ---- Chart 1: record over time --------------------------------------- #
+    # -Chart 1: record over time
     st.subheader(f"1 · The cheapest way to reach ≥ {level}%, over time")
     if s is None:
         best = models.loc[models["benchmark_score_pct"].idxmax()]
@@ -447,7 +444,7 @@ def display_tab4(df: Optional[pd.DataFrame] = None) -> None:
                 "the data show no cheaper-to-train alternative yet."
             )
 
-    # ---- Chart 2: dumbbell across levels --------------------------------- #
+    # - Chart 2: dumbbell across levels 
     st.subheader("2 · How much less compute, at each capability level?")
     summary = summary_table(models, SUMMARY_LEVELS)
     if summary.empty:
@@ -475,7 +472,7 @@ def display_tab4(df: Optional[pd.DataFrame] = None) -> None:
                 "Months between": st.column_config.NumberColumn(format="%.0f"),
             })
 
-    # ---- Answer and limits ----------------------------------------------- #
+    # - Answer and limits 
     st.subheader("3 · What this means for the question")
     if not summary.empty:
         big = summary[summary["factor"] > 1]
@@ -515,7 +512,7 @@ def display_tab4(df: Optional[pd.DataFrame] = None) -> None:
         "- **One benchmark.** GPQA Diamond measures science Q&A, not all capabilities."
     )
 
-    # ---- Verify ----------------------------------------------------------- #
+    # - Verify 
     st.subheader("4 · Verify a number")
     if s is None or qualifying[qualifying["is_record"]].empty:
         st.info("Choose a level that at least one model reaches to trace a record-setter back to source.")
