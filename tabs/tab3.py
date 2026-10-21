@@ -253,7 +253,10 @@ def display_tab3(gpqa_df: pd.DataFrame | None = None) -> None:
         the file. If omitted, this function loads data/gpqa.csv itself.
     """
 
-    st.header("User Story 2 · Capability at Comparable Compute")
+    # ------------------------------------------------------------------
+    # Page header
+    # ------------------------------------------------------------------
+    st.title("User Story 2 · Capability at Comparable Compute")
 
     st.markdown(
         """
@@ -265,10 +268,11 @@ proportionally increasing compute.**
     )
 
     st.caption(
-        "Scope: measured GPQA Diamond results only. "
-        "Training compute is reported pre-training compute; "
-        "missing compute values are excluded rather than estimated."
+        "Audience: AI Infrastructure Lead · Benchmark: GPQA Diamond · "
+        "Compute: reported pre-training FLOP · Missing compute is excluded, not estimated."
     )
+
+    st.divider()
 
     try:
         if gpqa_df is None:
@@ -281,17 +285,31 @@ proportionally increasing compute.**
         st.error(str(exc))
         return
 
-    band_label = st.selectbox(
-        "Compare models within a similar training-compute range",
-        options=list(COMPUTE_BANDS.keys()),
-        index=list(COMPUTE_BANDS.keys()).index(DEFAULT_BAND),
-        help=(
-            "Keeping models within the same order-of-magnitude compute band "
-            "reduces the extent to which a simple increase in training compute "
-            "explains differences in benchmark performance."
-        ),
-        key="tab3_compute_band",
-    )
+    # ------------------------------------------------------------------
+    # Controls: keep page-specific filters in the content area rather
+    # than in the navigation sidebar.
+    # ------------------------------------------------------------------
+    control_col, context_col = st.columns([2, 1])
+
+    with control_col:
+        band_label = st.selectbox(
+            "Compare models within a similar training-compute range",
+            options=list(COMPUTE_BANDS.keys()),
+            index=list(COMPUTE_BANDS.keys()).index(DEFAULT_BAND),
+            help=(
+                "Keeping models within the same order-of-magnitude compute band "
+                "reduces the extent to which a simple increase in training compute "
+                "explains differences in benchmark performance."
+            ),
+            key="tab3_compute_band",
+        )
+
+    with context_col:
+        st.caption("**Why this control?**")
+        st.caption(
+            "The comparison holds training compute within one broad order-of-magnitude "
+            "band, then compares measured GPQA outcomes across release years."
+        )
 
     low, high = COMPUTE_BANDS[band_label]
 
@@ -319,6 +337,9 @@ proportionally increasing compute.**
         )
         return
 
+    # ------------------------------------------------------------------
+    # KPI row
+    # ------------------------------------------------------------------
     c1, c2, c3 = st.columns(3)
 
     c1.metric("Measured models in band", f"{len(selected):,}")
@@ -337,6 +358,9 @@ proportionally increasing compute.**
         f"{selected['benchmark_score_pct'].median():.1f}%",
     )
 
+    # ------------------------------------------------------------------
+    # One concise narrative insight before the chart
+    # ------------------------------------------------------------------
     if len(summary) >= 2:
         first = summary.iloc[0]
         last = summary.iloc[-1]
@@ -344,14 +368,14 @@ proportionally increasing compute.**
         direction = "higher" if change_pp >= 0 else "lower"
 
         st.info(
-            f"**What the selected range shows:** among years with at least "
+            f"**What the selected view shows:** among years with at least "
             f"{MIN_MODELS_PER_YEAR} measured models, median GPQA was "
             f"**{first['median_gpqa_pct']:.1f}% in {int(first['release_year'])}** "
             f"and **{last['median_gpqa_pct']:.1f}% in {int(last['release_year'])}** "
             f"— **{abs(change_pp):.1f} percentage points {direction}**. "
-            "This pattern is consistent with capability improvement at comparable "
-            "reported training-compute levels, but it does not by itself prove "
-            "that algorithmic progress caused the change."
+            "This is consistent with capability improvement at comparable reported "
+            "training-compute levels, but it does not establish a causal effect of "
+            "algorithmic progress."
         )
     else:
         st.info(
@@ -359,6 +383,9 @@ proportionally increasing compute.**
             "observations for a year-level comparison."
         )
 
+    # ------------------------------------------------------------------
+    # Main visual: full-width inside the app's wide main content area
+    # ------------------------------------------------------------------
     st.plotly_chart(
         _build_chart(summary, band_label),
         use_container_width=True,
@@ -373,33 +400,35 @@ proportionally increasing compute.**
     )
 
     # ------------------------------------------------------------------
-    # Direct readout
+    # Supporting readout: collapsed by default so the first screen remains
+    # focused on the narrative and chart rather than a large table.
     # ------------------------------------------------------------------
-    st.subheader("Direct readout")
+    with st.expander("View the direct readout"):
+        display_summary = summary.rename(
+            columns={
+                "release_year": "Release year",
+                "n_models": "Models (n)",
+                "median_gpqa_pct": "Median GPQA (%)",
+                "q1_gpqa_pct": "25th percentile (%)",
+                "q3_gpqa_pct": "75th percentile (%)",
+                "median_log10_compute": "Median log10(FLOP)",
+            }
+        ).copy()
 
-    display_summary = summary.rename(
-        columns={
-            "release_year": "Release year",
-            "n_models": "Models (n)",
-            "median_gpqa_pct": "Median GPQA (%)",
-            "q1_gpqa_pct": "25th percentile (%)",
-            "q3_gpqa_pct": "75th percentile (%)",
-            "median_log10_compute": "Median log10(FLOP)",
-        }
-    ).copy()
+        for col in [
+            "Median GPQA (%)",
+            "25th percentile (%)",
+            "75th percentile (%)",
+            "Median log10(FLOP)",
+        ]:
+            display_summary[col] = display_summary[col].round(2)
 
-    for col in [
-        "Median GPQA (%)",
-        "25th percentile (%)",
-        "75th percentile (%)",
-        "Median log10(FLOP)",
-    ]:
-        display_summary[col] = display_summary[col].round(2)
+        st.dataframe(display_summary, use_container_width=True, hide_index=True)
 
-    st.dataframe(display_summary, use_container_width=True, hide_index=True)
-
-
-    with st.expander("Trace this chart's displayed values back to source"):
+    # ------------------------------------------------------------------
+    # Traceability / verification
+    # ------------------------------------------------------------------
+    with st.expander("Verify a displayed value"):
         st.markdown(
             "**Data lineage:** Epoch AI benchmark export → `raw_benchmarks.csv` "
             "→ `prepared_data.py` → `benchmarks.csv` → GPQA Diamond filter "
@@ -413,9 +442,7 @@ proportionally increasing compute.**
             key="tab3_trace_year",
         )
 
-        displayed_row = summary.loc[
-            summary["release_year"].eq(trace_year)
-        ].iloc[0]
+        displayed_row = summary.loc[summary["release_year"].eq(trace_year)].iloc[0]
 
         year_rows = selected.loc[selected["release_year"].eq(trace_year)].copy()
         recalculated_median = year_rows["benchmark_score_pct"].median()
@@ -475,7 +502,9 @@ proportionally increasing compute.**
             "(CC BY attribution)."
         )
 
-
+    # ------------------------------------------------------------------
+    # Interpretation, limitations and sources
+    # ------------------------------------------------------------------
     with st.expander("Interpretation, limitations and sources"):
         st.markdown(
             f"""
@@ -495,4 +524,12 @@ proportionally increasing compute.**
 #     streamlit run tabs/tab3.py
 # while still working normally when imported into the main app.
 if __name__ == "__main__":
+    # This only applies when tab3.py is launched directly. When imported by the
+    # main app, the root app should own st.set_page_config().
+    st.set_page_config(
+        page_title="User Story 2 · Capability at Comparable Compute",
+        page_icon="📊",
+        layout="wide",
+        initial_sidebar_state="collapsed",
+    )
     display_tab3()
