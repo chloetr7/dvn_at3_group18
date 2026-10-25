@@ -254,9 +254,9 @@ def display_tab3(gpqa_df: pd.DataFrame | None = None) -> None:
     """
 
     # ------------------------------------------------------------------
-    # Page header
+    # Header / user story
     # ------------------------------------------------------------------
-    st.title("User Story 2 · Capability at Comparable Compute")
+    st.header("User Story 2 · Capability at comparable compute")
 
     st.markdown(
         """
@@ -272,8 +272,6 @@ proportionally increasing compute.**
         "Compute: reported pre-training FLOP · Missing compute is excluded, not estimated."
     )
 
-    st.divider()
-
     try:
         if gpqa_df is None:
             gpqa_path = _find_gpqa_path()
@@ -286,10 +284,9 @@ proportionally increasing compute.**
         return
 
     # ------------------------------------------------------------------
-    # Controls: keep page-specific filters in the content area rather
-    # than in the navigation sidebar.
+    # Decision control
     # ------------------------------------------------------------------
-    control_col, context_col = st.columns([2, 1])
+    control_col, _ = st.columns([2, 1])
 
     with control_col:
         band_label = st.selectbox(
@@ -304,13 +301,6 @@ proportionally increasing compute.**
             key="tab3_compute_band",
         )
 
-    with context_col:
-        st.caption("**Why this control?**")
-        st.caption(
-            "The comparison holds training compute within one broad order-of-magnitude "
-            "band, then compares measured GPQA outcomes across release years."
-        )
-
     low, high = COMPUTE_BANDS[band_label]
 
     selected = gpqa[
@@ -321,13 +311,11 @@ proportionally increasing compute.**
     if selected.empty:
         st.warning(
             "No GPQA observations with reported training compute fall inside "
-            "the selected range."
+            "the selected range. Choose another compute band."
         )
         return
 
     raw_summary = _summarise_by_year(selected)
-
-    # Avoid presenting a year-level median based on only one or two models.
     summary = raw_summary[raw_summary["n_models"] >= MIN_MODELS_PER_YEAR].copy()
 
     if summary.empty:
@@ -341,25 +329,16 @@ proportionally increasing compute.**
     # KPI row
     # ------------------------------------------------------------------
     c1, c2, c3 = st.columns(3)
-
     c1.metric("Measured models in band", f"{len(selected):,}")
-
     c2.metric(
         "Years shown",
         f"{len(summary):,}",
-        help=(
-            f"Only years with at least {MIN_MODELS_PER_YEAR} observations "
-            "are plotted."
-        ),
+        help=f"Only years with at least {MIN_MODELS_PER_YEAR} observations are plotted.",
     )
-
-    c3.metric(
-        "Overall median GPQA",
-        f"{selected['benchmark_score_pct'].median():.1f}%",
-    )
+    c3.metric("Overall median GPQA", f"{selected['benchmark_score_pct'].median():.1f}%")
 
     # ------------------------------------------------------------------
-    # One concise narrative insight before the chart
+    # Key insight
     # ------------------------------------------------------------------
     if len(summary) >= 2:
         first = summary.iloc[0]
@@ -384,12 +363,15 @@ proportionally increasing compute.**
         )
 
     # ------------------------------------------------------------------
-    # Main visual: full-width inside the app's wide main content area
+    # 1 · Main evidence
     # ------------------------------------------------------------------
+    st.subheader("1 · Capability over time at comparable compute")
+
     st.plotly_chart(
         _build_chart(summary, band_label),
         use_container_width=True,
         config={"displayModeBar": False},
+        key="tab3_capability_chart",
     )
 
     st.caption(
@@ -399,11 +381,7 @@ proportionally increasing compute.**
         "Scores from different benchmark tasks are not pooled."
     )
 
-    # ------------------------------------------------------------------
-    # Supporting readout: collapsed by default so the first screen remains
-    # focused on the narrative and chart rather than a large table.
-    # ------------------------------------------------------------------
-    with st.expander("View the direct readout"):
+    with st.expander("View the underlying yearly values"):
         display_summary = summary.rename(
             columns={
                 "release_year": "Release year",
@@ -426,84 +404,85 @@ proportionally increasing compute.**
         st.dataframe(display_summary, use_container_width=True, hide_index=True)
 
     # ------------------------------------------------------------------
-    # Traceability / verification
+    # 2 · Verification
     # ------------------------------------------------------------------
-    with st.expander("Verify a displayed value"):
-        st.markdown(
-            "**Data lineage:** Epoch AI benchmark export → `raw_benchmarks.csv` "
-            "→ `prepared_data.py` → `benchmarks.csv` → GPQA Diamond filter "
-            "→ `gpqa.csv` → compute-band filter → yearly median."
+    st.subheader("2 · Verify a displayed value")
+
+    st.markdown(
+        "**Data lineage:** Epoch AI benchmark export → `raw_benchmarks.csv` "
+        "→ `prepared_data.py` → `benchmarks.csv` → GPQA Diamond filter "
+        "→ `gpqa.csv` → compute-band filter → yearly median."
+    )
+
+    trace_year = st.selectbox(
+        "Choose a displayed year to verify",
+        options=summary["release_year"].tolist(),
+        index=len(summary) - 1,
+        key="tab3_trace_year",
+    )
+
+    displayed_row = summary.loc[summary["release_year"].eq(trace_year)].iloc[0]
+    year_rows = selected.loc[selected["release_year"].eq(trace_year)].copy()
+    recalculated_median = year_rows["benchmark_score_pct"].median()
+
+    st.markdown(
+        f"**Displayed result:** {int(trace_year)} median GPQA = "
+        f"**{displayed_row['median_gpqa_pct']:.2f}%**, based on "
+        f"**{int(displayed_row['n_models'])} measured models** in "
+        f"**{band_label}**."
+    )
+
+    v1, v2, v3 = st.columns(3)
+    v1.metric("Displayed median", f"{displayed_row['median_gpqa_pct']:.2f}%")
+    v2.metric("Recalculated median", f"{recalculated_median:.2f}%")
+    v3.metric("Underlying models", f"{len(year_rows):,}")
+
+    median_matches = np.isclose(
+        displayed_row["median_gpqa_pct"],
+        recalculated_median,
+        rtol=0,
+        atol=1e-9,
+    )
+    band_matches = (
+        year_rows["log10_compute_flop"].ge(low)
+        & year_rows["log10_compute_flop"].lt(high)
+    ).all()
+    count_matches = len(year_rows) == int(displayed_row["n_models"])
+
+    if median_matches:
+        st.success(
+            "Verified: the displayed yearly median equals the median of the "
+            "underlying measured GPQA scores."
+        )
+    else:
+        st.error(
+            "Verification failed: the displayed yearly median does not match "
+            "the median recalculated from the underlying observations."
         )
 
-        trace_year = st.selectbox(
-            "Choose a displayed year to verify",
-            options=summary["release_year"].tolist(),
-            index=len(summary) - 1,
-            key="tab3_trace_year",
+    if band_matches and count_matches:
+        st.success(
+            "Verified: every observation used for this displayed year is inside "
+            "the selected compute band, and the displayed model count matches "
+            "the underlying rows."
+        )
+    else:
+        st.error(
+            "Verification failed: at least one underlying row falls outside the "
+            "selected compute band or the displayed count does not match."
         )
 
-        displayed_row = summary.loc[summary["release_year"].eq(trace_year)].iloc[0]
-
-        year_rows = selected.loc[selected["release_year"].eq(trace_year)].copy()
-        recalculated_median = year_rows["benchmark_score_pct"].median()
-
-        st.markdown(
-            f"**Displayed result:** {int(trace_year)} median GPQA = "
-            f"**{displayed_row['median_gpqa_pct']:.2f}%**, based on "
-            f"**{int(displayed_row['n_models'])} measured models** in "
-            f"**{band_label}**."
-        )
-
-        v1, v2, v3 = st.columns(3)
-        v1.metric("Displayed median", f"{displayed_row['median_gpqa_pct']:.2f}%")
-        v2.metric("Recalculated median", f"{recalculated_median:.2f}%")
-        v3.metric("Underlying models", f"{len(year_rows):,}")
-
+    with st.expander("View the observations behind this median"):
         verification = _format_verification_rows(year_rows)
         st.dataframe(verification, use_container_width=True, hide_index=True)
 
-        median_matches = np.isclose(
-            displayed_row["median_gpqa_pct"],
-            recalculated_median,
-            rtol=0,
-            atol=1e-9,
-        )
-        band_matches = (
-            year_rows["log10_compute_flop"].ge(low)
-            & year_rows["log10_compute_flop"].lt(high)
-        ).all()
-        count_matches = len(year_rows) == int(displayed_row["n_models"])
-
-        if median_matches:
-            st.success(
-                "Verified: the displayed yearly median equals the median of the "
-                "underlying measured GPQA scores."
-            )
-        else:
-            st.error(
-                "Verification failed: the displayed yearly median does not match "
-                "the median recalculated from the underlying observations."
-            )
-
-        if band_matches and count_matches:
-            st.success(
-                "Verified: every observation used for this displayed year is inside "
-                "the selected compute band, and the displayed model count matches "
-                "the underlying rows."
-            )
-        else:
-            st.error(
-                "Verification failed: at least one underlying row falls outside the "
-                "selected compute band or the displayed count does not match."
-            )
-
-        st.markdown(
-            f"Source: [Epoch AI — Capabilities & Benchmarking]({SOURCE_URL}) "
-            "(CC BY attribution)."
-        )
+    st.markdown(
+        f"Source: [Epoch AI — Capabilities & Benchmarking]({SOURCE_URL}) "
+        "(CC BY attribution)."
+    )
 
     # ------------------------------------------------------------------
-    # Interpretation, limitations and sources
+    # Interpretation / limits
     # ------------------------------------------------------------------
     with st.expander("Interpretation, limitations and sources"):
         st.markdown(
@@ -518,6 +497,14 @@ proportionally increasing compute.**
 - **Reproducibility:** see `data/DATA_DICTIONARY.md` and `prepared_data.py` for the documented source fields and transforms.
             """
         )
+
+
+def render(gpqa_df: pd.DataFrame | None = None) -> None:
+    display_tab3(gpqa_df)
+
+
+def show(gpqa_df: pd.DataFrame | None = None) -> None:
+    display_tab3(gpqa_df)
 
 
 # Allows this tab to be tested directly with:
