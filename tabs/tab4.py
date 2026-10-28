@@ -352,13 +352,19 @@ def _trace_to_source(records: pd.DataFrame) -> None:
 # Page
 
 def display_tab4(df: Optional[pd.DataFrame] = None) -> None:
-    st.header("User Story 3A · How much compute does a capability level need, and is it falling?")
+    """Render Tab 4 / User Story 3A. Optionally pass the GPQA dataframe from app.py."""
+
+    # Header / user story
+    st.header("User Story 3A · Compute needed to reach a capability level")
     st.markdown(
-        "**Question:** To what extent have recent frontier AI capability gains depended on increasing "
-        "training compute versus improvements in compute efficiency?  \n"
-        "**For the AI Infrastructure Lead:** pick a capability level you need. This tab shows which model "
-        "reached it first, which model has since reached it with the **least reported training compute**, "
-        "and how long that took, so you can judge whether a cheaper-to-train alternative is likely to exist."
+        "**As an AI Infrastructure Lead, I want to identify models that achieve strong measured capability "
+        "with comparatively lower training compute, so that I can evaluate more resource-efficient "
+        "alternatives instead of selecting models based on scale alone.**"
+    )
+    st.markdown(
+        "**Decision this tab supports:** pick the capability level you need. The tab shows which model reached "
+        "it first, which model has since reached it with the least reported training compute, and how long that "
+        "took, so you can judge whether a cheaper-to-train alternative is likely to exist or to appear soon."
     )
 
     try:
@@ -373,15 +379,15 @@ def display_tab4(df: Optional[pd.DataFrame] = None) -> None:
         st.error(f"Unable to load the GPQA data: {exc}")
         return
 
-    latest = rows["publication_date"].max()
     st.caption(
-        f"Source: [Epoch AI — Benchmarking Hub]({SOURCE_URL}) (CC BY) · file `data/gpqa.csv` · "
-        f"{len(df):,} GPQA Diamond runs, of which {len(rows):,} have reported training compute "
-        f"({rows['model_name'].nunique()} models) · latest model release in this subset: {latest:%d %b %Y}. "
-        "Models without published training compute are excluded, not treated as zero."
+        "Audience: AI Infrastructure Lead · Benchmark: GPQA Diamond (best run per model) · "
+        "Compute: reported pre-training FLOP · "
+        f"{rows['model_name'].nunique()} models with reported compute, released "
+        f"{rows['publication_date'].min():%b %Y} – {rows['publication_date'].max():%b %Y} · "
+        "Missing compute is excluded, not estimated."
     )
 
-    #  Controls
+    # Decision controls
     c1, c2 = st.columns([3, 2])
     level = c1.slider("Capability level you need: minimum GPQA Diamond score (%)",
                       min_value=40, max_value=95, value=80, step=5, key="tab4_level",
@@ -394,17 +400,16 @@ def display_tab4(df: Optional[pd.DataFrame] = None) -> None:
     if access is not None:
         models = models[models["licence_category"] == access]
     if models.empty:
-        st.info("No models with reported training compute match this access filter. Choose another option.")
+        st.warning("No models with reported training compute match this access filter. Choose another option.")
         return
 
     qualifying = compute_records(models, level)
     s = summarise_level(qualifying)
 
-    # -Chart 1: record over time
-    st.subheader(f"1 · The cheapest way to reach ≥ {level}%, over time")
+    # KPI row and key insight for the selected level
     if s is None:
         best = models.loc[models["benchmark_score_pct"].idxmax()]
-        st.info(
+        st.warning(
             f"No {ACCESS_NOUNS[access]} with reported training compute reaches "
             f"{level}% on GPQA Diamond. The highest here is {best['model_name']} at "
             f"{best['benchmark_score_pct']:.1f}%. Lower the level or widen the access filter."
@@ -422,39 +427,46 @@ def display_tab4(df: Optional[pd.DataFrame] = None) -> None:
             k3.metric("Compute reduction", "None yet", "no cheaper model has reached it", delta_color="off")
         k4.metric("Models reaching the level", f"{s['n']} of {len(models)}")
 
-        st.plotly_chart(build_record_chart(models, qualifying, level), key="tab4_chart1")
-        st.caption(
-            "Each point is one model (its best GPQA Diamond run). Green stars mark each time a model reached the "
-            "level with less training compute than any earlier model; the green step line is that lowest value "
-            "as of each date. Grey points score below the chosen level and are shown for context. "
-            "Training compute = Epoch AI's estimate of pre-training FLOP."
-        )
         if s["factor"] > 1:
-            st.markdown(
-                f"**Reading the chart:** {s['first']['model_name']} first reached {level}% in "
+            st.info(
+                f"**What the selected level shows:** {s['first']['model_name']} first reached {level}% in "
                 f"{s['first']['publication_date']:%B %Y} with {_sci(s['first']['training_compute_flop'])} FLOP. "
                 f"{s['cheapest']['model_name']} reached it {_months(s['months'])} with "
-                f"{_sci(s['cheapest']['training_compute_flop'])} FLOP — **{_factor(s['factor'])} less "
-                f"training compute** for the same measured level."
+                f"{_sci(s['cheapest']['training_compute_flop'])} FLOP: **{_factor(s['factor'])} less training "
+                "compute** for the same measured level. This is an observed association, not proof of why "
+                "the later model needed less compute."
             )
         else:
-            st.markdown(
-                f"**Reading the chart:** no later model has reached {level}% with less training compute than "
-                f"{s['first']['model_name']} ({_sci(s['first']['training_compute_flop'])} FLOP). At this level, "
-                "the data show no cheaper-to-train alternative yet."
+            st.info(
+                f"**What the selected level shows:** no later model has reached {level}% with less training "
+                f"compute than {s['first']['model_name']} ({_sci(s['first']['training_compute_flop'])} FLOP). "
+                "At this level, the data show no cheaper-to-train alternative yet."
             )
 
-    # - Chart 2: dumbbell across levels 
+    # 1 · Main evidence: record over time
+    if s is not None:
+        st.subheader(f"1 · The least compute that has reached ≥ {level}%, over time")
+        st.plotly_chart(build_record_chart(models, qualifying, level), key="tab4_chart1",
+                        config={"displayModeBar": False})
+        st.caption(
+            f"Figure: training compute (log scale) of every model by release date. Coloured points reach "
+            f"≥ {level}% on GPQA Diamond; grey points score below it and are shown for context. Green stars mark "
+            "each time a model reached the level with less training compute than any earlier model, and the green "
+            "step line is that lowest value as of each date. Record-setters are labelled with their values."
+        )
+
+    # 2 · Main evidence: reduction at each level
     st.subheader("2 · How much less compute, at each capability level?")
     summary = summary_table(models, SUMMARY_LEVELS)
     if summary.empty:
-        st.info("None of the comparison levels (40–90%) is reached under this access filter.")
+        st.warning("None of the comparison levels (40–95%) is reached under this access filter.")
     else:
-        st.plotly_chart(build_dumbbell(summary), key="tab4_chart2")
+        st.plotly_chart(build_dumbbell(summary), key="tab4_chart2", config={"displayModeBar": False})
         st.caption(
-            "Grey square = compute of the first model to reach the level. Green star = the least compute any "
-            "model has needed to reach it since. The longer the bar, the more the compute needed for that "
-            f"level has fallen. Access filter: {access_label.lower()}. Log scale: each gridline is 10× more compute."
+            "Figure: grey square = training compute of the first model to reach each GPQA Diamond level; green "
+            "star = the least compute any model has needed to reach it since. The longer the bar, the more the "
+            f"compute needed for that level has fallen. Access filter: {access_label.lower()}. "
+            "Log scale: each gridline is 10× more compute."
         )
         table = summary.rename(columns={
             "level": "GPQA level (%)", "first_model": "First to reach", "first_date": "First date",
@@ -464,7 +476,7 @@ def display_tab4(df: Optional[pd.DataFrame] = None) -> None:
         })
         table["First date"] = table["First date"].dt.date
         table["Least-compute date"] = table["Least-compute date"].dt.date
-        with st.expander("Table of the values in chart 2"):
+        with st.expander("View the underlying values in chart 2"):
             st.dataframe(table, hide_index=True, column_config={
                 "First: training FLOP": st.column_config.NumberColumn(format="%.2e"),
                 "Least: training FLOP": st.column_config.NumberColumn(format="%.2e"),
@@ -472,9 +484,7 @@ def display_tab4(df: Optional[pd.DataFrame] = None) -> None:
                 "Months between": st.column_config.NumberColumn(format="%.0f"),
             })
 
-    # - Answer and limits 
-    st.subheader("3 · What this means for the question")
-    if not summary.empty:
+        # Answer across all levels
         big = summary[summary["factor"] > 1]
         top = summary.loc[summary["level"].idxmax()]
         top_share = (models["training_compute_flop"] < top["first_flop"]).mean()
@@ -493,31 +503,39 @@ def display_tab4(df: Optional[pd.DataFrame] = None) -> None:
             )
         if not big.empty:
             st.info(
-                f"**Answer from this tab:** at {len(big)} of the {len(summary)} levels compared, a later model reached "
-                f"the same GPQA Diamond score with less training compute than the first model to get there, "
-                f"between {_factor(big['factor'].min())} and {_factor(big['factor'].max())} less, with a median gap of "
-                f"{big['months'].median():.0f} months. Efficiency gains follow once a level is reached. " + top_text
+                f"**Answer from this tab:** at {len(big)} of the {len(summary)} levels compared, a later model "
+                f"reached the same GPQA Diamond score with less training compute than the first model to get there, "
+                f"between {_factor(big['factor'].min())} and {_factor(big['factor'].max())} less, with a median gap "
+                f"of {big['months'].median():.0f} months. Efficiency gains follow once a level is reached. " + top_text
             )
         else:
-            st.info("Under this filter no level has been reached more cheaply after it was first reached.")
-    st.markdown(
-        "**What the data cannot show**\n"
-        "- **Cause.** These are associations; we cannot say *why* a later model needed less compute "
-        "(better data, distillation from a bigger model, architecture or post-training).\n"
-        "- **Distilled models hide their teacher's compute.** A small model trained on a large model's outputs "
-        "reports only its own training FLOP.\n"
-        "- **Inference and total cost.** Training FLOP says nothing about serving cost, latency or price.\n"
-        "- **Missing compute.** Many GPQA results (often from closed labs) have no published compute and are "
-        "excluded, so some levels may have been reached earlier or more cheaply than shown.\n"
-        "- **One benchmark.** GPQA Diamond measures science Q&A, not all capabilities."
-    )
+            st.info("**Answer from this tab:** under this filter, no level has been reached more cheaply after "
+                    "it was first reached.")
 
-    # - Verify 
-    st.subheader("4 · Verify a number")
+    # 3 · Verification
+    st.subheader("3 · Verify a displayed value")
     if s is None or qualifying[qualifying["is_record"]].empty:
-        st.info("Choose a level that at least one model reaches to trace a record-setter back to source.")
+        st.info("Choose a level that at least one model reaches to trace a record-setting model back to source.")
     else:
         _trace_to_source(qualifying[qualifying["is_record"]].reset_index(drop=True))
+    st.markdown(f"Source: [Epoch AI — Capabilities & Benchmarking]({SOURCE_URL}) (CC BY attribution).")
+
+    # Interpretation / limits
+    with st.expander("Interpretation, limitations and sources"):
+        st.markdown(
+            f"""
+- **What this shows:** for each GPQA Diamond level, the first model to reach it and the least reported pre-training compute any model has needed to reach it since, among models with published compute.
+- **What this cannot show:** *why* a later model needed less compute. Better data, distillation from a larger model, architecture and post-training may all contribute; these are associations, not causal effects.
+- **Distilled models hide their teacher's compute:** a small model trained on a larger model's outputs reports only its own training FLOP.
+- **Inference and total cost:** training FLOP says nothing about serving cost, latency or price.
+- **Missingness matters:** many GPQA results (often from closed labs) have no published compute and are excluded, so some levels may have been reached earlier or more cheaply than shown.
+- **One benchmark:** GPQA Diamond measures graduate-level science questions, not all capabilities.
+- **Best-run rule:** each model is represented by its best-scoring GPQA run (same rule as User Story 1), since versions of one model share one training-compute value.
+- **Measured-only rule:** benchmark scores and compute values are not imputed.
+- **Source:** [Epoch AI — Capabilities & Benchmarking]({SOURCE_URL}).
+- **Reproducibility:** see `data/DATA_DICTIONARY.md` and `prepared_data.py` for the documented source fields and transforms.
+            """
+        )
 
 
 def render(df: Optional[pd.DataFrame] = None) -> None:
@@ -529,5 +547,6 @@ def show(df: Optional[pd.DataFrame] = None) -> None:
 
 
 if __name__ == "__main__":
-    st.set_page_config(page_title="Tab 4 · US3A Compute to reach a level", layout="wide")
+    st.set_page_config(page_title="User Story 3A · Compute needed to reach a capability level", page_icon="📊",
+                       layout="wide", initial_sidebar_state="collapsed")
     display_tab4()
