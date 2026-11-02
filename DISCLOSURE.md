@@ -54,7 +54,7 @@ The table below records substantive AI use by each team member and the verificat
 
 ---
 
-## Member-Specific AI Use — Nguyen Thao Nhi Trường
+## Member-Specific AI Use — Nguyen Thao Nhi Truong
 
 ### Project framing
 
