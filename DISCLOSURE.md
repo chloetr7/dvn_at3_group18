@@ -50,7 +50,8 @@ The table below records substantive AI use by each team member and the verificat
 | [Member 1] | [AI TOOL] | [SUBSTANTIVE USE] | [FILE / SECTION] | [WHAT AI HELPED WITH] | [SPECIFIC CHECK THAT COULD HAVE FAILED] | [RESULT OF CHECK] |
 | [Member 2] | [AI TOOL] | [SUBSTANTIVE USE] | [FILE / SECTION] | [WHAT AI HELPED WITH] | [SPECIFIC CHECK THAT COULD HAVE FAILED] | [RESULT OF CHECK] |
 | [Member 4] | [AI TOOL] | [SUBSTANTIVE USE] | [FILE / SECTION] | [WHAT AI HELPED WITH] | [SPECIFIC CHECK THAT COULD HAVE FAILED] | [RESULT OF CHECK] |
-| [Member 5, if applicable] | [AI TOOL] | [SUBSTANTIVE USE] | [FILE / SECTION] | [WHAT AI HELPED WITH] | [SPECIFIC CHECK THAT COULD HAVE FAILED] | [RESULT OF CHECK] |
+| **Xingqi Zhang** | ChatGPT by OpenAI | Development and debugging of User Story 3B: resource-efficient model choices | `tabs/tab5.py`; US3B README documentation | ChatGPT assisted with Streamlit code, interactive filters, a ranked dot plot, Pareto-efficient model identification, source verification and debugging. | Ran the dashboard locally using Epoch AI GPQA data. Checked that the raw score of 0.60795455 for gpt-oss-20b converts to 60.80%, and that the raw and processed training compute both equal 5.49e23 FLOP. These checks could have failed if the data lookup or conversion was incorrect. | The score conversion and compute values matched the original benchmark record. The dashboard ran successfully and was committed to GitHub. |
+
 
 ---
 
@@ -104,7 +105,25 @@ This verification was designed so that an incorrect filter, aggregation or trans
 ---
 
 ## Responsibility for Final Outputs
+## Member-Specific AI Use — Xingqi Zhang (US3B)
 
+### Dashboard and visual design
+
+ChatGPT was used to help develop and debug the `tabs/tab5.py` Streamlit page. The implementation compares measured GPQA Diamond scores with reported training compute using an adjustable minimum-score requirement, release-year and organisation filters, a ranked dot plot on a log-compute axis, and Pareto candidate highlighting.
+
+A simple linear-axis bar chart was considered less suitable because compute spans several orders of magnitude.
+
+### Verification and limitations
+
+The page was run locally against the group's processed `gpqa.csv`.
+
+In the default view, 93 GPQA observations have usable positive training compute, and 43 meet the 60% minimum score.
+
+For gpt-oss-20b, the original measured score of 0.60795455 becomes 60.80% after multiplying by 100 and rounding. The raw and processed training compute both match at 5.49 × 10²³ FLOP.
+
+These checks could have failed if the benchmark-run lookup, percentage conversion or filtering logic were incorrect.
+
+AI suggestions were reviewed through local execution and source-record checks. The analysis does not establish causal algorithmic efficiency or real-world inference costs.
 All team members remain responsible for the final submitted work.
 
 Generative AI outputs were treated as suggestions rather than evidence. Final analytical claims were based on the project datasets and were reviewed against the underlying observations before inclusion in the application.
