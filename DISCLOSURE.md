@@ -47,7 +47,7 @@ The table below records substantive AI use by each team member and the verificat
 | Team member | AI tool | Substantive use | Where used | AI contribution | Human verification | Outcome |
 |---|---|---|---|---|---|---|
 | **Nguyen Thao Nhi Trường** | ChatGPT | Development and review of User Story 2: capability at comparable compute | `tabs/tab3.py`; project framing and documentation | Used ChatGPT to assist with Streamlit debugging, review the layout and information hierarchy of User Story 2, discuss the choice of a yearly-median line chart rather than an individual-model scatter plot, and refine explanatory wording. ChatGPT also assisted with restructuring the tab so the controls, KPIs, main visual, verification and limitations followed a consistent dashboard layout. | The code was run and inspected using the actual processed Epoch AI GPQA data. For the default **10²⁴–10²⁵ FLOP** band, the displayed **2026 median GPQA value of 89.74%** was independently recalculated from the **10 underlying observations**. The verification also tested that every observation fell inside the selected compute band and that the displayed observation count matched the underlying rows. These checks could have failed if the filtering, aggregation or AI-assisted code were incorrect. | The recalculated median matched the displayed value, all observations satisfied the selected compute-band rule, and the displayed count matched the underlying rows. The AI-assisted implementation was retained after these checks. |
-| [Member 1] | [AI TOOL] | [SUBSTANTIVE USE] | [FILE / SECTION] | [WHAT AI HELPED WITH] | [SPECIFIC CHECK THAT COULD HAVE FAILED] | [RESULT OF CHECK] |
+| Yuchao Zong | Claude (Anthropic) | Development of the macro overview: training-compute growth | tabs/tab1.py; Macro Overview section of README.md | Claude wrote most of the Streamlit code for Tab 1, including the log-scale scatter plot with trend line, the yearly-median comparison of Open-Weight and Closed / API-Only models, the KPIs, the verification panel and the limitations text. It also helped draft the README section and the Part 1 presentation script. | Ran the tab locally on the real Epoch AI data and checked that the model counts matched DATA_DICTIONARY.md (351 models: 207 Open-Weight, 144 Closed / API-Only). Recalculated the displayed 2026 Open-Weight median (4.32 × 10²⁴ FLOP) from its 17 underlying models, and traced a displayed model back to raw_ai_models.csv to compare training FLOP and parameters. Visually reviewed the charts in the dark theme. These checks could have failed if the filtering, aggregation or lookup were wrong. | Counts, the recalculated median and the raw-record values all matched. The visual review found two real problems in the AI-generated version: model labels and the trend line were invisible in dark mode, and the cumulative growth was shown with false precision (×3,298,754). Both were fixed before committing. |
 | [Member 2] | [AI TOOL] | [SUBSTANTIVE USE] | [FILE / SECTION] | [WHAT AI HELPED WITH] | [SPECIFIC CHECK THAT COULD HAVE FAILED] | [RESULT OF CHECK] |
 | [Member 4] | [AI TOOL] | [SUBSTANTIVE USE] | [FILE / SECTION] | [WHAT AI HELPED WITH] | [SPECIFIC CHECK THAT COULD HAVE FAILED] | [RESULT OF CHECK] |
 | **Xingqi Zhang** | ChatGPT by OpenAI | Development and debugging of User Story 3B: resource-efficient model choices | `tabs/tab5.py`; US3B README documentation | ChatGPT assisted with Streamlit code, interactive filters, a ranked dot plot, Pareto-efficient model identification, source verification and debugging. | Ran the dashboard locally using Epoch AI GPQA data. Checked that the raw score of 0.60795455 for gpt-oss-20b converts to 60.80%, and that the raw and processed training compute both equal 5.49e23 FLOP. These checks could have failed if the data lookup or conversion was incorrect. | The score conversion and compute values matched the original benchmark record. The dashboard ran successfully and was committed to GitHub. |
@@ -173,4 +173,35 @@ The application displayed matching results for the checked observation.
 AI-generated suggestions were evaluated through local code execution and comparison with the source data.
 
 Finally, the analysis does not establish causal algorithmic efficiency, and training compute should not be interpreted as a direct measure of inference cost or real-world operational efficiency.
+---
+## Member-Specific AI Use — Yuchao Zong (Macro Overview)
+
+### Project contribution
+
+I was responsible for the macro overview tab (`tabs/tab1.py`), which shows how quickly the training compute behind notable AI models has grown since 2018 and compares Open-Weight with Closed / API-Only models. I also wrote the Macro Overview section of the README.
+
+### How AI was used
+
+Claude (Anthropic) was used as a coding and writing assistant. It generated most of the Streamlit code for the tab, following the structure and conventions already used in the other tabs, and later made the layout changes agreed in the group (a written takeaway box and a renamed verification section). Claude also helped draft the README section and my Part 1 presentation script.
+
+The analytical rules in the final tab are:
+
+- use `data/ai_models.csv` only, with no imputed compute or parameter values;
+- estimate growth with an ordinary least-squares fit of log₁₀(training FLOP) on release date;
+- show yearly medians only where a year and access group has at least three models; and
+- present the results as descriptive, not causal.
+
+### Visualisation decision
+
+The main chart is a scatter plot of every model on a logarithmic compute axis with a fitted trend line. A linear axis was rejected because compute spans more than ten orders of magnitude, so the largest recent runs would flatten every earlier model to the floor.
+
+### Verification
+
+- Ran the tab locally on the real data and confirmed the counts against the data dictionary: 351 models, of which 207 are Open-Weight and 144 Closed / API-Only.
+- Recalculated the displayed 2026 Open-Weight yearly median (4.32 × 10²⁴ FLOP) from its 17 underlying models; it matched.
+- Traced a displayed model back to `data/raw_ai_models.csv` by model name and publication date; training FLOP and parameter count matched exactly.
+- Reviewed the rendered charts. This found two problems in the AI-generated code: labels and the trend line were invisible in the dark theme, and the cumulative growth was displayed with false precision (×3,298,754 instead of about 3.3 million times). Both were corrected.
+
+These checks could have failed if the filtering, aggregation, raw-record lookup or display formatting were wrong. I remain responsible for the final code and the claims shown in the tab.
+
 ## Responsibility for Final Outputs
