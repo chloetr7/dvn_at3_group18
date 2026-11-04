@@ -163,7 +163,41 @@ This user story is explored through two complementary views:
 
 #### User Story 3B — Resource-efficient model choices
 
-[TO COMPLETE BY TAB 5 OWNER]
+##### Objective
+
+This dashboard supports an AI Infrastructure Lead in identifying models that achieve strong measured capability with comparatively lower training compute.
+
+##### Data and Methodology
+
+The analysis uses the Epoch AI GPQA Diamond benchmark dataset. Among 316 observations, 93 have reported positive training compute and are eligible for comparison. Missing compute values are excluded rather than imputed.
+
+##### Visualisation Design
+
+A ranked dot plot with a logarithmic horizontal axis is used to compare the training compute of qualifying models.
+
+A standard linear bar chart was considered but rejected because training compute varies by several orders of magnitude, making smaller values difficult to compare.
+
+The dashboard also identifies Pareto-efficient candidates based on benchmark performance and training compute.
+
+##### Interactions
+
+Users can adjust the minimum GPQA Diamond score, release-year range, organisation and number of models displayed. The ranking and summary metrics update based on these selections.
+
+##### Key Finding
+
+With the default minimum GPQA Diamond score of 60%, 43 observations qualify. Among these observations, gpt-oss-20b has the lowest reported training compute of approximately 5.49 × 10²³ FLOP, with a measured GPQA Diamond score of 60.80%.
+
+This finding applies to the selected observations and performance threshold, rather than identifying the universally most efficient AI model.
+
+##### Verification
+
+The dashboard traces displayed values through the original Epoch AI benchmark export, `prepared_data.py`, `benchmarks.csv` and `gpqa.csv`.
+
+For example, the original GPQA Diamond score for gpt-oss-20b is 0.60795455. Multiplying it by 100 and rounding produces the displayed score of 60.80%. Its reported training compute also matches the original record.
+
+##### Limitations
+
+Training compute does not directly measure inference cost, latency or overall algorithmic efficiency. Missing compute disclosures may affect the ranking. The observed relationships do not establish causality.
 
 ---
 
