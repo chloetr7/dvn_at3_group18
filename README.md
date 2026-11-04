@@ -45,6 +45,51 @@ These patterns are consistent with improvements in compute efficiency, but the o
 
 ---
 
+## Macro Overview — Compute Growth
+
+**Dashboard section:** `Overview · Compute growth`
+
+#### Objective
+
+This section sets the scene for the user stories. Before asking what training compute buys, it shows the AI Infrastructure Lead how quickly the compute behind notable AI models has grown, and therefore how fast the cost of staying at the frontier is rising.
+
+#### Data and methodology
+
+The analysis uses `data/ai_models.csv`, prepared from Epoch AI — Notable AI Models. It contains **351** models released from 2018 to 2026, all with positive reported training compute and parameter counts. Missing values are excluded rather than imputed.
+
+Growth is estimated with an ordinary least-squares fit of log₁₀(training FLOP) on release date. The slope is converted into a growth multiple per year and a doubling time. Yearly medians are calculated separately for Open-Weight and Closed / API-Only models, and are shown only where a year and access group has at least **three** models.
+
+#### Visualisation design
+
+The main visual is a **scatter plot of every model's training compute over time on a logarithmic axis**, with a fitted trend line and labels for the largest training run of recent years.
+
+A linear axis was considered but rejected: training compute spans more than ten orders of magnitude, so the largest recent runs would flatten almost every earlier model against the floor and hide the exponential trend. Showing yearly averages only was also rejected as the main view, because individual models are what the persona recognises and can inspect.
+
+A second line chart compares the yearly median compute of Open-Weight and Closed / API-Only models.
+
+#### Interactions
+
+Users can filter by release-year range, model access group and primary domain, and choose which models are labelled. The KPIs, trend line, charts, written takeaway and verification output update with the filters.
+
+#### Key finding
+
+Across all 351 models, training compute grew by about **×5.7 per year**, doubling roughly every **4.8 months**. Over the 8.6 years covered, this compounds to about 3.3 million times. The trend explains about 53% of the variation in log-compute (R²).
+
+Since 2024, the yearly median compute of Open-Weight models is similar to that of Closed / API-Only models. This should be read with caution, because many frontier closed models do not disclose their training compute and are therefore missing from the data.
+
+#### Verification
+
+The section includes a visible verification panel with two checks:
+
+- **Yearly median check:** the plotted yearly median is recalculated from the underlying models' FLOP values. For example, the 2026 Open-Weight median of **4.32 × 10²⁴ FLOP** is recalculated from its **17** underlying models and matches the displayed value.
+- **Source trace:** any displayed model can be looked up in the original `data/raw_ai_models.csv` export by model name and publication date. The app confirms that training FLOP and parameter count match the raw Epoch AI record exactly.
+
+#### Limitations
+
+Epoch AI lists *notable* models, and only models with published compute and parameters are kept, so the largest closed runs may be under-represented. Many FLOP values are Epoch AI estimates, so the trend is more reliable than any single point. The Open-Weight / Closed grouping is a project-derived access category, not a legal licence. The analysis is descriptive and does not establish what caused compute growth or whether compute caused capability gains.
+
+---
+
 ## User Stories
 
 ### User Story 1 — Compute vs Capability
@@ -344,7 +389,7 @@ A full Data & AI Disclosure is provided in:
 
 | Member                    | Main contribution                                                                                                      |
 | ------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| [Member 1]                | [TO COMPLETE]                                                                                                          |
+| Yuchao Zong               | Macro overview (Tab 1): training-compute growth analysis, visualisation, verification and README section |
 | [Member 2]                | [TO COMPLETE]                                                                                                          |
 | Nguyen Thao Nhi Trường    | Project framing and user-story structure; GPQA data preparation; User Story 2 analysis, visualisation and verification |
 | [Member 4]                | [TO COMPLETE]                                                                                                          |
