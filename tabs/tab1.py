@@ -457,8 +457,18 @@ def display_tab1(df: Optional[pd.DataFrame] = None) -> None:
         "Medians are taken on the log scale, which is robust to the very largest runs."
     )
 
+    # ---- Key takeaway ------------------------------------------------------ #
+    if trend is not None:
+        st.info(
+            f"**Takeaway:** the training compute behind notable AI models has grown about "
+            f"**×{trend['growth_per_year']:.1f} per year** (doubling every "
+            f"~{trend['doubling_months']:.0f} months) across {years[0]}–{years[1]}. "
+            "Scale alone has risen very fast, so the user-story tabs ask how much of the "
+            "capability gain that compute explains, and where efficiency matters instead."
+        )
+
     # ---- Verification ------------------------------------------------------ #
-    st.subheader("3 · Verify the numbers")
+    st.subheader("3 · Verify a displayed value")
     v1, v2 = st.tabs(["Check a yearly median", "Trace a model to source"])
     with v1:
         _verify_year(view, summary)
