@@ -105,24 +105,72 @@ This verification was designed so that an incorrect filter, aggregation or trans
 ---
 ## Member-Specific AI Use — Xingqi Zhang (US3B)
 
-### Dashboard and visual design
+### Project contribution
 
-ChatGPT was used to help develop and debug the `tabs/tab5.py` Streamlit page. The implementation compares measured GPQA Diamond scores with reported training compute using an adjustable minimum-score requirement, release-year and organisation filters, a ranked dot plot on a log-compute axis, and Pareto candidate highlighting.
+I was responsible for developing User Story 3B, which focuses on identifying AI models that achieve strong measured capability with comparatively lower training compute.
 
-A simple linear-axis bar chart was considered less suitable because compute spans several orders of magnitude.
+My contribution was implemented in `tabs/tab5.py` and integrated into the group's Streamlit application.
+
+ChatGPT was used to assist with understanding the implementation requirements, structuring the dashboard, developing Python and Streamlit code, and troubleshooting technical issues.
+
+### Data and analytical work
+
+The analysis uses GPQA Diamond benchmark observations from the Epoch AI dataset, prepared through the group's existing data-processing pipeline.
+
+The final implementation follows these analytical rules:
+
+- Use measured GPQA Diamond benchmark scores.
+- Retain observations with positive reported training compute.
+- Exclude missing compute values rather than imputing them.
+- Apply an adjustable minimum capability threshold.
+- Rank qualifying observations by reported training compute.
+- Identify Pareto-efficient candidates within the selected comparison group.
+
+The processed dataset contains 316 GPQA observations, of which 93 have usable training-compute information.
+
+ChatGPT assisted with implementing the filtering, ranking and comparison logic. The resulting dashboard was tested locally using the actual project data.
+
+### Visualisation and Streamlit development
+
+ChatGPT helped develop the interactive Streamlit interface, including the minimum GPQA score slider, release-year and organisation filters, model ranking visualisation and source verification panel.
+
+The main visualisation is a ranked dot plot using a logarithmic horizontal axis.
+
+A standard linear-axis bar chart was considered as an alternative. However, reported training compute varies by several orders of magnitude, making smaller values difficult to compare on a linear scale.
+
+The dot plot was retained because it provides a clearer comparison of training-compute requirements across qualifying models.
+
+The dashboard also highlights Pareto-efficient candidates to help users examine the trade-off between measured capability and training compute.
+
+### Debugging and testing
+
+ChatGPT was used to help resolve Streamlit compatibility and DataFrame display errors encountered during local development.
+
+After modifying the code, I reran the application and checked that the main visualisations, model selection controls and source verification section displayed correctly.
+
+I also tested the minimum GPQA score filter and confirmed that changing the threshold updated the displayed results.
 
 ### Verification and limitations
 
-The page was run locally against the group's processed `gpqa.csv`.
+The final dashboard includes an explicit source verification section.
 
-In the default view, 93 GPQA observations have usable positive training compute, and 43 meet the 60% minimum score.
+Under the default minimum GPQA score threshold of 60%:
 
-For gpt-oss-20b, the original measured score of 0.60795455 becomes 60.80% after multiplying by 100 and rounding. The raw and processed training compute both match at 5.49 × 10²³ FLOP.
+- 93 observations have usable training-compute information.
+- 43 observations meet the selected performance requirement.
+- gpt-oss-20b has the lowest reported training compute among the qualifying observations.
 
-These checks could have failed if the benchmark-run lookup, percentage conversion or filtering logic were incorrect.
+For gpt-oss-20b, the original measured GPQA score is 0.60795455.
 
-AI suggestions were reviewed through local execution and source-record checks. The analysis does not establish causal algorithmic efficiency or real-world inference costs.
-All team members remain responsible for the final submitted work.
+Multiplying this value by 100 gives 60.795455%, which rounds to the displayed value of 60.80%.
 
-Generative AI outputs were treated as suggestions rather than evidence. Final analytical claims were based on the project datasets and were reviewed against the underlying observations before inclusion in the application.
+The original and processed training-compute values both match at 5.49 × 10²³ FLOP.
+
+These verification checks could have failed if the benchmark-run lookup, percentage conversion, filtering logic or training-compute transformation were incorrect.
+
+The application displayed matching results for the checked observation.
+
+AI-generated suggestions were evaluated through local code execution and comparison with the source data.
+
+Finally, the analysis does not establish causal algorithmic efficiency, and training compute should not be interpreted as a direct measure of inference cost or real-world operational efficiency.
 ## Responsibility for Final Outputs
