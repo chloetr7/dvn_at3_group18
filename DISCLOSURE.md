@@ -103,8 +103,6 @@ For the default **10²⁴–10²⁵ FLOP** compute band:
 This verification was designed so that an incorrect filter, aggregation or transformation would produce a visible mismatch rather than being accepted without inspection.
 
 ---
-
-## Responsibility for Final Outputs
 ## Member-Specific AI Use — Xingqi Zhang (US3B)
 
 ### Dashboard and visual design
@@ -127,3 +125,4 @@ AI suggestions were reviewed through local execution and source-record checks. T
 All team members remain responsible for the final submitted work.
 
 Generative AI outputs were treated as suggestions rather than evidence. Final analytical claims were based on the project datasets and were reviewed against the underlying observations before inclusion in the application.
+## Responsibility for Final Outputs
