@@ -11,7 +11,10 @@ Principles:
 4. Keep missing benchmark/compute values as NaN and filter them only for charts that require them.
 """
 
+import json
 import os
+from datetime import datetime, timezone
+
 import numpy as np
 import pandas as pd
 
@@ -28,6 +31,7 @@ RAW_BENCHMARKS_PATH = os.path.join(DATA_DIR, "raw_benchmarks.csv")
 PROCESSED_MODELS_PATH = os.path.join(DATA_DIR, "ai_models.csv")
 PROCESSED_BENCHMARKS_PATH = os.path.join(DATA_DIR, "benchmarks.csv")
 PROCESSED_GPQA_PATH = os.path.join(DATA_DIR, "gpqa.csv")
+METADATA_PATH = os.path.join(DATA_DIR, "metadata.json")
 
 # The current Epoch Capabilities & Benchmarking export contains GPQA Diamond
 # but does NOT contain MMLU. GPQA is therefore used as the primary measured
@@ -439,7 +443,32 @@ def build_gpqa_subset(
 
 
 # ---------------------------------------------------------------------
-# 4. Main
+# 4. Refresh metadata (read by app.py for "Last refreshed" / "Data coverage")
+# ---------------------------------------------------------------------
+
+def _date_range(series: pd.Series) -> dict:
+    dates = pd.to_datetime(series, errors="coerce").dropna()
+    if dates.empty:
+        return {"start": None, "end": None}
+    return {"start": dates.min().strftime("%Y-%m-%d"), "end": dates.max().strftime("%Y-%m-%d")}
+
+
+def write_metadata(models: pd.DataFrame, benchmarks: pd.DataFrame, gpqa: pd.DataFrame) -> None:
+    """Record when the processed files were regenerated and what dates they cover."""
+    metadata = {
+        "last_refreshed_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "coverage": {
+            "ai_models": {**_date_range(models["publication_date"]), "rows": int(len(models))},
+            "benchmarks": {**_date_range(benchmarks["publication_date"]), "rows": int(len(benchmarks))},
+            "gpqa": {**_date_range(gpqa["publication_date"]), "rows": int(len(gpqa))},
+        },
+    }
+    with open(METADATA_PATH, "w", encoding="utf-8") as f:
+        json.dump(metadata, f, indent=2)
+
+
+# ---------------------------------------------------------------------
+# 5. Main
 # ---------------------------------------------------------------------
 
 def main():
@@ -464,6 +493,7 @@ def main():
         PROCESSED_GPQA_PATH,
         index=False,
     )
+    write_metadata(processed_models, processed_benchmarks, processed_gpqa)
 
     print("\n=== DATA PREPARATION SUMMARY ===")
     print(
@@ -506,6 +536,7 @@ def main():
     print(f"- {PROCESSED_MODELS_PATH}")
     print(f"- {PROCESSED_BENCHMARKS_PATH}")
     print(f"- {PROCESSED_GPQA_PATH}")
+    print(f"- {METADATA_PATH}")
 
     print(
         "\nNOTE: No synthetic benchmark scores were created. "

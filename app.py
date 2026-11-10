@@ -11,6 +11,7 @@ tab instead of breaking the whole app.
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import numpy as np
@@ -43,9 +44,9 @@ PERSONA = (
 TABS = [
     ("Overview · Compute growth", tab1, "display_tab1"),
     ("US1 · Compute vs capability", tab2, "display_tab2"),
-    ("US2 · Capability at similar compute", tab3, "display_tab3"),
+    ("US2 · Capability at comparable compute", tab3, "display_tab3"),
     ("US3A · Compute to reach a level", tab4, "display_tab4"),
-    ("US3B · Efficient model choices", tab5, "render"),
+    ("US3B · Efficient model choices", tab5, "display_tab5"),  # falls back to render() until renamed
 ]
 
 
@@ -77,8 +78,25 @@ def headline() -> dict | None:
         "n_gpqa": len(g),
         "band_min": in_band.min(),
         "band_max": in_band.max(),
-        "latest": max(models["publication_date"].max(), g["publication_date"].max()),
+        # Coverage = earliest and latest model release in each analytical dataset.
+        "models_start": models["publication_date"].min(),
+        "models_end": models["publication_date"].max(),
+        "gpqa_start": gpqa["publication_date"].min(),
+        "gpqa_end": gpqa["publication_date"].max(),
     }
+
+
+def last_refreshed() -> str:
+    """When prepared_data.py last regenerated the processed files (from data/metadata.json).
+
+    This is deliberately not the time the app is opened: the app does not re-download
+    or rebuild the data, so "now" would overstate how fresh the data are.
+    """
+    try:
+        meta = json.loads((DATA_DIR / "metadata.json").read_text(encoding="utf-8"))
+        return f"{pd.Timestamp(meta['last_refreshed_utc']):%d %b %Y}"
+    except (OSError, ValueError, KeyError):
+        return "not recorded (run `python prepared_data.py`)"
 
 
 # --------------------------------------------------------------------------- #
@@ -92,7 +110,7 @@ if h is not None:
     st.info(
         f"**Headline:** across {h['n_models']} notable AI models released since {h['first_year']}, "
         f"training compute grew about **×{h['growth']:.1f} per year**. Yet among {h['n_gpqa']} "
-        f"GPQA Diamond results with disclosed compute, models trained with similar compute "
+        f"GPQA Diamond results with disclosed compute, models trained with comparable compute "
         f"(10²⁴–10²⁵ FLOP) scored anywhere from **{h['band_min']:.0f}% to {h['band_max']:.0f}%**. "
         "More compute goes with stronger models, but it is not the whole story: the tabs below "
         "show where efficiency gains appear."
@@ -100,7 +118,9 @@ if h is not None:
     st.caption(
         f"Data: Epoch AI — [Notable AI Models]({MODELS_URL}) and "
         f"[Capabilities & Benchmarking]({BENCH_URL}) (CC BY). "
-        f"Latest model release in the data: {h['latest']:%d %b %Y}. "
+        f"**Data coverage:** notable models released {h['models_start']:%d %b %Y} – {h['models_end']:%d %b %Y}; "
+        f"GPQA Diamond results for models released {h['gpqa_start']:%d %b %Y} – {h['gpqa_end']:%d %b %Y}. "
+        f"**Last refreshed:** {last_refreshed()}. "
         "See `data/DATA_DICTIONARY.md` for sources and processing."
     )
 else:

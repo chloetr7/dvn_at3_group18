@@ -8,6 +8,11 @@ Data: the group's processed ``data/gpqa.csv`` (Epoch AI — Capabilities & Bench
 GPQA Diamond only), restricted to rows with disclosed training compute.
 Only measured source values are used; nothing is imputed.
 
+Layout follows the shared tab structure (Tab 3 reference):
+header → user story → scope caption → controls → KPI row → key insight →
+main charts → supporting table (collapsed) → visible verification →
+collapsed interpretation / limitations / sources.
+
 Use inside the main app:   tab2.display_tab2()   (aliases: render(), show())
 Preview on its own:        streamlit run tabs/tab2.py
 """
@@ -152,6 +157,11 @@ def _sup(exponent: int) -> str:
     return str(exponent).translate(str.maketrans("-0123456789", "⁻⁰¹²³⁴⁵⁶⁷⁸⁹"))
 
 
+def _name_date(name: str, date: pd.Timestamp) -> str:
+    """'Model (Mon YYYY)', unless the model name already carries a date (same rule as Tab 4)."""
+    return name if "(" in name else f"{name} ({date:%b %Y})"
+
+
 def _deviation_labels(df: pd.DataFrame, n: int) -> pd.DataFrame:
     """The n models furthest above and below trend (one label per model)."""
     if n <= 0:
@@ -249,7 +259,8 @@ def build_scatter(df: pd.DataFrame, trend: Optional[dict], colour_by: str, label
         elif y < 15:
             going_up = True
         fig.add_annotation(
-            x=r["log10_compute_flop"], y=y, text=f"<b>{r['model_name']}</b>",
+            x=r["log10_compute_flop"], y=y,
+            text=f"<b>{r['model_name']}</b> · {y:.0f}%",
             showarrow=True, arrowhead=0, arrowwidth=1,
             ax=(-70 if i % 2 == 0 else 70), ay=(-30 - 14 * (i % 2)) if going_up else (30 + 14 * (i % 2)),
             font=dict(size=11), arrowcolor=TREND_COLOUR,
@@ -259,15 +270,16 @@ def build_scatter(df: pd.DataFrame, trend: Optional[dict], colour_by: str, label
     _log_x_axis(fig, df["log10_compute_flop"].min(), df["log10_compute_flop"].max())
     _score_y_axis(fig)
     fig.update_layout(
+        title=dict(text="Measured GPQA Diamond score vs reported training compute", x=0.0, xanchor="left"),
         height=560,
-        margin=dict(l=60, r=10, t=70, b=10),
-        legend=dict(orientation="h", yanchor="bottom", y=1.04, x=0),
+        margin=dict(l=60, r=10, t=90, b=10),
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, x=0),
         plot_bgcolor="rgba(0,0,0,0)",
     )
     return fig
 
 
-def build_bands(df: pd.DataFrame) -> go.Figure:
+def build_bands(df: pd.DataFrame, bands: pd.DataFrame) -> go.Figure:
     fig = go.Figure()
     for band in [b for b in BAND_LABELS if b in set(df["compute_band"])]:
         part = df[df["compute_band"] == band]
@@ -286,9 +298,20 @@ def build_bands(df: pd.DataFrame) -> go.Figure:
                 showlegend=False,
             )
         )
+    # Print each band's median on the chart so the key value is readable without hovering.
+    for band, row in bands.iterrows():
+        n = int((df["compute_band"] == band).sum())
+        fig.add_annotation(
+            x=f"{band}<br>n={n}", y=row["max"], text=f"median {row['median']:.0f}%",
+            showarrow=False, yshift=14, font=dict(size=11),
+        )
     _score_y_axis(fig)
     fig.update_xaxes(title="Training compute band (FLOP)")
-    fig.update_layout(height=420, margin=dict(l=60, r=10, t=30, b=10), plot_bgcolor="rgba(0,0,0,0)")
+    fig.update_layout(
+        title=dict(text="Spread of GPQA Diamond scores within each order of magnitude of compute",
+                   x=0.0, xanchor="left"),
+        height=440, margin=dict(l=60, r=10, t=60, b=10), plot_bgcolor="rgba(0,0,0,0)",
+    )
     return fig
 
 
@@ -310,18 +333,22 @@ def _verify_band(view: pd.DataFrame, bands: pd.DataFrame) -> None:
     table = rows[["model_name", "organization", "publication_date", "training_compute_flop",
                   "benchmark_score_pct"]].copy()
     table["publication_date"] = table["publication_date"].dt.date
+    # Streamlit number columns cannot hold values above 2^53, so FLOP is shown as text.
+    table["training_compute_flop"] = table["training_compute_flop"].map(lambda x: f"{x:.3e}")
     table.columns = ["Model", "Organisation", "Released", "Training compute (FLOP)", "GPQA Diamond (%)"]
     st.dataframe(
         table.sort_values("GPQA Diamond (%)", ascending=False),
+        use_container_width=True,
         hide_index=True,
         column_config={
-            "Training compute (FLOP)": st.column_config.NumberColumn(format="%.3e"),
             "GPQA Diamond (%)": st.column_config.NumberColumn(format="%.1f"),
         },
     )
     if np.isclose(rows["benchmark_score_pct"].max() - rows["benchmark_score_pct"].min(),
                   bands.loc[band, "range"]):
         st.success("Verified: the box spans exactly the lowest and highest measured scores listed above.")
+    else:
+        st.error("Verification failed: the box range does not match the listed scores.")
 
 
 def _trace_run(view: pd.DataFrame) -> None:
@@ -329,6 +356,12 @@ def _trace_run(view: pd.DataFrame) -> None:
     choice = st.selectbox("Pick a point to trace back to the raw Epoch AI benchmark file", labels,
                           key="tab2_trace")
     row = view.iloc[labels.index(choice)]
+
+    st.markdown(
+        "**Data lineage:** Epoch AI benchmark export → `raw_benchmarks.csv` → `prepared_data.py` → "
+        "`benchmarks.csv` → GPQA Diamond filter → `gpqa.csv` → this tab "
+        "(rows with reported compute)."
+    )
 
     raw_path = _find_data_path("raw_benchmarks.csv")
     if raw_path is None:
@@ -364,6 +397,7 @@ def _trace_run(view: pd.DataFrame) -> None:
                 ],
             }
         ),
+        use_container_width=True,
         hide_index=True,
     )
     ok_score = pd.notna(raw_score) and np.isclose(raw_score * 100, row["benchmark_score_pct"], rtol=1e-9)
@@ -378,15 +412,19 @@ def _trace_run(view: pd.DataFrame) -> None:
 # Tab
 # --------------------------------------------------------------------------- #
 def display_tab2(df: Optional[pd.DataFrame] = None) -> None:
-    st.header("User Story 1 · Does more training compute mean stronger capability?")
+    # ---- Header and user story ---------------------------------------------- #
+    st.header("User Story 1 · Compute vs capability")
     st.markdown(
-        "Each dot is one measured **GPQA Diamond** result (graduate-level science questions) for a "
-        "model whose training compute is disclosed. The horizontal axis is training compute on a "
-        "**log scale** — each gridline is a 10× jump. The question for an infrastructure lead is not "
-        "only *whether* more compute goes with higher scores, but whether it does so **consistently** "
-        "enough to plan on."
+        "**As an AI Infrastructure Lead, I want to compare measured AI capability with training "
+        "compute, so that I can assess whether higher-compute models are consistently associated "
+        "with stronger performance.**"
+    )
+    st.caption(
+        "Audience: AI Infrastructure Lead · Benchmark: GPQA Diamond · "
+        "Compute: reported pre-training FLOP · Missing compute is excluded, not estimated."
     )
 
+    # ---- Data --------------------------------------------------------------- #
     if df is None or not REQUIRED_COLUMNS.issubset(df.columns):
         path = _find_data_path("gpqa.csv")
         if path is None:
@@ -403,7 +441,7 @@ def display_tab2(df: Optional[pd.DataFrame] = None) -> None:
         st.warning("No GPQA Diamond results with measured training compute are available.")
         return
 
-    # ---- Filters ----------------------------------------------------------- #
+    # ---- Controls ----------------------------------------------------------- #
     y_min, y_max = int(runs["release_year"].min()), int(runs["release_year"].max())
     f1, f2, f3 = st.columns([2, 2, 2])
     years = f1.slider("Release years", y_min, y_max, (y_min, y_max), key="tab2_years")
@@ -433,7 +471,7 @@ def display_tab2(df: Optional[pd.DataFrame] = None) -> None:
     )
     bands = summarise_bands(view)
 
-    # ---- Headline numbers --------------------------------------------------- #
+    # ---- KPI row ------------------------------------------------------------ #
     k1, k2, k3, k4 = st.columns(4)
     k1.metric("Results shown", f"{trend['n']}",
               help=f"Out of {gpqa_total} GPQA Diamond results; only those with disclosed training compute are used.")
@@ -445,6 +483,24 @@ def display_tab2(df: Optional[pd.DataFrame] = None) -> None:
               help=f"Highest minus lowest score within one order of magnitude of compute "
                    f"(bands with ≥ {MIN_PER_BAND} results).")
 
+    # ---- Key insight -------------------------------------------------------- #
+    above = view.loc[view["residual"].idxmax()]
+    below = view.loc[view["residual"].idxmin()]
+    gap_text = (
+        "" if bands.empty
+        else f" Models with comparable compute can differ by up to **{bands['range'].max():.0f} points**."
+    )
+    st.info(
+        f"**What the selected view shows:** across {trend['n']} results, higher training compute goes with "
+        f"higher GPQA Diamond scores (**{trend['slope']:+.1f} pp per 10× compute**, Spearman ρ = "
+        f"{trend['rho']:.2f}), but the trend explains only **{trend['r2']:.0%}** of the variation (R²)."
+        f"{gap_text} {_name_date(above['model_name'], above['publication_date'])} sits "
+        f"{above['residual']:+.0f} pp above the trend and "
+        f"{_name_date(below['model_name'], below['publication_date'])} {below['residual']:+.0f} pp below it. "
+        "Compute and capability are associated, but not consistently enough to choose a model on scale "
+        "alone. This is an association, not a causal effect."
+    )
+
     # ---- Chart 1: capability vs compute ------------------------------------ #
     st.subheader("1 · Capability vs training compute")
     c1, c2 = st.columns([1, 2])
@@ -452,36 +508,34 @@ def display_tab2(df: Optional[pd.DataFrame] = None) -> None:
                          key="tab2_colour")
     label_n = c2.slider("Label the largest deviations from trend (above and below)", 0, 5, 3,
                         key="tab2_label_n")
-    st.plotly_chart(build_scatter(view, trend, colour_by, label_n))
-    st.markdown(
-        f"**Reading the chart:** across the {trend['n']} results shown, higher training compute goes with "
-        f"higher GPQA Diamond scores — about **{trend['slope']:+.1f} percentage points per 10× compute** "
-        f"(Spearman ρ = {trend['rho']:.2f}). But the fitted line explains only **{trend['r2']:.0%}** of the "
-        "variation in scores (R²): many points sit far above or below it."
-    )
+    st.plotly_chart(build_scatter(view, trend, colour_by, label_n), use_container_width=True,
+                    config={"displayModeBar": False}, key="tab2_scatter")
     st.caption(
-        "Trend = ordinary least-squares fit of GPQA score on log₁₀(training FLOP). Diamonds are "
-        "closed / API-only models, circles are open-weight. Hover a point for details."
+        "Figure: each point is one measured GPQA Diamond result. Trend = ordinary least-squares fit of "
+        "GPQA score on log₁₀(training FLOP). Diamonds are closed / API-only models, circles are "
+        "open-weight. Labelled models show their score on the chart; exact values for every point are "
+        "listed in the tables below and in *Verify a displayed value*."
     )
 
     # ---- Chart 2: consistency within compute bands ------------------------- #
-    st.subheader("2 · How consistent is it at a similar compute level?")
-    st.plotly_chart(build_bands(view))
+    st.subheader("2 · How consistent is it at comparable compute?")
+    st.plotly_chart(build_bands(view, bands), use_container_width=True,
+                    config={"displayModeBar": False}, key="tab2_bands")
     if not bands.empty:
         widest = bands["range"].idxmax()
-        st.markdown(
-            f"**Reading the chart:** each box is one order of magnitude of compute. In the **{widest} FLOP** "
-            f"band, scores range from **{bands.loc[widest, 'min']:.0f}%** to **{bands.loc[widest, 'max']:.0f}%** "
-            f"— a {bands.loc[widest, 'range']:.0f}-point gap between models trained with similar compute."
+        st.caption(
+            f"Figure: each box is one order of magnitude of training compute; every result is shown as a "
+            f"point and each band's median is printed above it. In the **{widest} FLOP** band, scores range "
+            f"from **{bands.loc[widest, 'min']:.0f}%** to **{bands.loc[widest, 'max']:.0f}%**, a "
+            f"{bands.loc[widest, 'range']:.0f}-point gap between models trained with comparable compute. "
+            f"Bands with fewer than {MIN_PER_BAND} results are excluded from the spread statistics."
         )
 
-    # ---- Table: furthest from trend ----------------------------------------- #
-    st.subheader("3 · Models furthest from the trend")
+    # ---- Supporting table (collapsed) -------------------------------------- #
     cols = {"model_name": "Model", "organization": "Organisation", "publication_date": "Released",
             "training_compute_flop": "Training compute (FLOP)", "benchmark_score_pct": "GPQA Diamond (%)",
             "residual": "vs trend (pp)"}
     col_cfg = {
-        "Training compute (FLOP)": st.column_config.NumberColumn(format="%.2e"),
         "GPQA Diamond (%)": st.column_config.NumberColumn(format="%.1f"),
         "vs trend (pp)": st.column_config.NumberColumn(format="%+.1f"),
     }
@@ -489,32 +543,23 @@ def display_tab2(df: Optional[pd.DataFrame] = None) -> None:
     def _dev_table(rows: pd.DataFrame) -> pd.DataFrame:
         out = rows[list(cols)].rename(columns=cols)
         out["Released"] = out["Released"].dt.date
+        # Streamlit number columns cannot hold values above 2^53, so FLOP is shown as text.
+        out["Training compute (FLOP)"] = out["Training compute (FLOP)"].map(lambda x: f"{x:.2e}")
         return out
 
-    t1, t2 = st.columns(2)
-    with t1:
-        st.markdown("**Above trend** — more capability than compute alone would suggest")
-        st.dataframe(_dev_table(view.nlargest(5, "residual")),
-                     hide_index=True, column_config=col_cfg)
-    with t2:
-        st.markdown("**Below trend** — less capability than compute alone would suggest")
-        st.dataframe(_dev_table(view.nsmallest(5, "residual")),
-                     hide_index=True, column_config=col_cfg)
+    with st.expander("View models furthest from the trend"):
+        t1, t2 = st.columns(2)
+        with t1:
+            st.markdown("**Above trend** — more capability than compute alone would suggest")
+            st.dataframe(_dev_table(view.nlargest(5, "residual")), use_container_width=True,
+                         hide_index=True, column_config=col_cfg)
+        with t2:
+            st.markdown("**Below trend** — less capability than compute alone would suggest")
+            st.dataframe(_dev_table(view.nsmallest(5, "residual")), use_container_width=True,
+                         hide_index=True, column_config=col_cfg)
 
-    above = view.loc[view["residual"].idxmax()]
-    below = view.loc[view["residual"].idxmin()]
-    st.info(
-        f"**What this means for infrastructure planning.** Compute and capability are clearly "
-        f"associated, but not consistently: models with similar compute can differ by up to "
-        f"{bands['range'].max():.0f} points. {above['model_name']} (released "
-        f"{above['publication_date']:%b %Y}) sits {above['residual']:+.0f} pp above the trend, while "
-        f"{below['model_name']} (released {below['publication_date']:%b %Y}) sits "
-        f"{below['residual']:+.0f} pp below it. Scale alone is therefore a weak basis for choosing a model. "
-        "The next tab asks whether *newer* models get more capability from the same compute."
-    )
-
-    # ---- Verification ------------------------------------------------------ #
-    st.subheader("4 · Verify the numbers")
+    # ---- Verification (visible) -------------------------------------------- #
+    st.subheader("3 · Verify a displayed value")
     v1, v2 = st.tabs(["Check a compute band", "Trace a point to source"])
     with v1:
         _verify_band(view, bands)
@@ -523,10 +568,11 @@ def display_tab2(df: Optional[pd.DataFrame] = None) -> None:
 
     st.markdown(f"Source: [Epoch AI — Capabilities & Benchmarking]({SOURCE_URL}) (CC BY attribution).")
 
+    # ---- Interpretation, limitations and sources (collapsed) --------------- #
     with st.expander("Interpretation, limitations and sources"):
         st.markdown(
             f"""
-- **What this shows:** how measured GPQA Diamond scores vary with training compute for models released from {years[0]} to {years[1]}, and how widely scores spread at similar compute.
+- **What this shows:** how measured GPQA Diamond scores vary with training compute for models released from {years[0]} to {years[1]}, and how widely scores spread at comparable compute.
 - **What this cannot show:** that more compute *causes* higher scores — this is an association. Release date, post-training and reasoning settings also differ between models.
 - **Sample:** {len(runs)} of {gpqa_total} GPQA Diamond results have disclosed training compute; the rest are excluded, not imputed. Closed frontier models rarely disclose compute, so they are under-represented ({int((runs['licence_category'] == 'Closed / API-Only').sum())} closed results).
 - **Repeated models:** some models appear several times (different evaluated versions sharing one compute estimate). Switch to *Best version per model* to check the conclusion holds.
@@ -534,7 +580,9 @@ def display_tab2(df: Optional[pd.DataFrame] = None) -> None:
 - **Estimates:** many FLOP values are Epoch AI estimates; treat single points as approximate and read the overall pattern.
 - **Ceiling effect:** GPQA Diamond tops out near 100%, so gains among the strongest models are compressed.
 - **Access groups:** "Open-Weight" vs "Closed / API-Only" is the project's grouping, not a legal licence.
-- **Source:** [Epoch AI — Capabilities & Benchmarking]({SOURCE_URL}). See `data/DATA_DICTIONARY.md` and `prepared_data.py`.
+- **Measured-only rule:** benchmark scores and compute values are not imputed.
+- **Source:** [Epoch AI — Capabilities & Benchmarking]({SOURCE_URL}) (CC BY attribution).
+- **Reproducibility:** see `data/DATA_DICTIONARY.md` and `prepared_data.py`.
 """
         )
 
@@ -549,5 +597,5 @@ def show(df: Optional[pd.DataFrame] = None) -> None:
 
 
 if __name__ == "__main__":
-    st.set_page_config(page_title="Tab 2 · Compute vs capability", layout="wide")
+    st.set_page_config(page_title="User Story 1 · Compute vs capability", layout="wide")
     display_tab2()

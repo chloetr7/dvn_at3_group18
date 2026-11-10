@@ -98,8 +98,48 @@ Epoch AI lists *notable* models, and only models with published compute and para
 
 **Dashboard section:** `US1 · Compute vs capability`
 
-**Analysis:**
-[TO COMPLETE BY TAB 2 OWNER]
+#### Objective
+
+This section tests the simplest version of the "scale" explanation. If capability depended mainly on training compute, higher-compute models should score consistently higher. The AI Infrastructure Lead needs to know not only *whether* compute and capability move together, but whether they do so consistently enough to choose a model on compute alone.
+
+#### Data and methodology
+
+The analysis uses `data/gpqa.csv` (Epoch AI Capabilities & Benchmarking, GPQA Diamond only). Of **316** GPQA Diamond results, the **93** with disclosed positive training compute are used; the rest are excluded, not imputed.
+
+- An ordinary least-squares fit of GPQA score (percentage points) on log₁₀(training FLOP) gives the average change per 10× compute, and its R² shows how much of the variation compute accounts for.
+- A Spearman rank correlation measures whether the association is monotonic, without assuming a straight line.
+- Results are grouped into one-order-of-magnitude compute bands. The score range within each band (bands with at least **five** results) measures how far apart models with comparable compute can be.
+- Residuals from the trend identify the models furthest above and below what compute alone would suggest.
+- Some models were evaluated in several versions that share one compute estimate. A *Best version per model* option keeps one point per model (72 points) to check that repeated models do not drive the result.
+
+#### Visualisation design
+
+The main visual is a **scatter plot of GPQA Diamond score against training compute on a logarithmic axis**, with the fitted trend line. Points can be coloured by release year or by model access, and the largest deviations from trend are labelled with their score.
+
+A linear compute axis was rejected because compute spans several orders of magnitude, which would compress most models into one corner. A bar chart of average score per compute band was also rejected as the main view: averages would hide exactly the spread this user story asks about.
+
+A second chart, a **box plot of scores within each compute band** with every result shown as a point and each band's median printed on the chart, makes the consistency question explicit.
+
+#### Interactions
+
+Users can filter by release-year range and model access group, switch the unit of analysis (all evaluated versions or best version per model), colour points by release year or access, and choose how many deviations from trend to label. The KPIs, written takeaway, both charts, deviation tables and verification output update with these selections.
+
+#### Key finding
+
+Higher training compute is associated with higher GPQA Diamond scores: about **+14.8 percentage points per 10× compute** (Spearman ρ = 0.65, n = 93). The association is not consistent, though. The trend explains only **36%** of the variation in scores (R²), and in the 10²⁴–10²⁵ FLOP band scores range from **27% to 92%**, a 65-point gap between models with comparable compute. The pattern holds with one point per model (+13.8 pp per 10×, ρ = 0.62, R² = 31%, n = 72).
+
+For the AI Infrastructure Lead, compute alone is a weak basis for choosing a model. This motivates User Story 2, which asks whether newer models achieve more at comparable compute.
+
+#### Verification
+
+The section includes a visible verification panel with two checks:
+
+- **Compute-band check:** for a selected band, the app lists every underlying result and confirms that the plotted box spans exactly the lowest and highest measured scores. For example, the 10²⁴–10²⁵ FLOP band contains **45** results ranging from **26.96% to 91.67%**, with a median of **65.34%**.
+- **Source trace:** any displayed point can be looked up in `data/raw_benchmarks.csv` by its benchmark run ID. For example, DeepSeek V4 Flash 0731 (run `EDFusDaaFkh5n2MqKNxMBD`) has a raw score of 0.910354 and 2.496 × 10²⁴ FLOP; the app shows 91.04% and the same FLOP, and confirms the match.
+
+#### Limitations
+
+The analysis is an association, not a causal estimate. Only pre-training compute is counted, so post-training, reinforcement learning and inference-time reasoning can place newer models above the trend. Closed frontier models rarely disclose compute and are under-represented (17 of 93 results). Many FLOP values are Epoch AI estimates. GPQA Diamond tops out near 100%, which compresses differences among the strongest models.
 
 ---
 
@@ -306,7 +346,7 @@ To regenerate the processed datasets:
 python prepared_data.py
 ```
 
-[ADD ANY REQUIRED COMMAND-LINE ARGUMENTS IF APPLICABLE]
+No command-line arguments are required. The script also writes `data/metadata.json`, which records when the processed files were regenerated and the date coverage of each dataset; `app.py` reads it to show **Data coverage** and **Last refreshed** on the first screen.
 
 ---
 
@@ -350,7 +390,7 @@ streamlit run app.py
 │   ├── benchmarks.csv
 │   └── gpqa.csv
 │
-└── [AI DISCLOSURE / PROVENANCE FILES]
+└── AI_DISCLOSURE.md
 ```
 
 Adjust this tree if the final repository structure differs.
@@ -377,11 +417,11 @@ AI-generated suggestions were not accepted without verification. Team members ch
 
 A detailed record of substantive AI use and the verification performed by each team member is provided in:
 
-`[ADD AI PROVENANCE FILE NAME]`
+`AI_DISCLOSURE.md` (AI Provenance Matrix section)
 
 A full Data & AI Disclosure is provided in:
 
-`[ADD AI DISCLOSURE FILE NAME]`
+`AI_DISCLOSURE.md`
 
 ---
 
@@ -390,7 +430,7 @@ A full Data & AI Disclosure is provided in:
 | Member                    | Main contribution                                                                                                      |
 | ------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
 | Yuchao Zong               | Macro overview (Tab 1): training-compute growth analysis, visualisation, verification and README section |
-| [Member 2]                | [TO COMPLETE]                                                                                                          |
+| Qi Wang                   | User Story 1 (Tab 2): compute-vs-capability analysis, visualisation and verification; main app (`app.py`) integration, refresh metadata and deployment |
 | Nguyen Thao Nhi Trường    | Project framing and user-story structure; GPQA data preparation; User Story 2 analysis, visualisation and verification |
 | [Member 4]                | [TO COMPLETE]                                                                                                          |
 | [Member 5, if applicable] | [TO COMPLETE]                                                                                                          |

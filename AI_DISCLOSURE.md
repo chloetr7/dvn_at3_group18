@@ -48,7 +48,7 @@ The table below records substantive AI use by each team member and the verificat
 |---|---|---|---|---|---|---|
 | **Nguyen Thao Nhi Trường** | ChatGPT | Development and review of User Story 2: capability at comparable compute | `tabs/tab3.py`; project framing and documentation | Used ChatGPT to assist with Streamlit debugging, review the layout and information hierarchy of User Story 2, discuss the choice of a yearly-median line chart rather than an individual-model scatter plot, and refine explanatory wording. ChatGPT also assisted with restructuring the tab so the controls, KPIs, main visual, verification and limitations followed a consistent dashboard layout. | The code was run and inspected using the actual processed Epoch AI GPQA data. For the default **10²⁴–10²⁵ FLOP** band, the displayed **2026 median GPQA value of 89.74%** was independently recalculated from the **10 underlying observations**. The verification also tested that every observation fell inside the selected compute band and that the displayed observation count matched the underlying rows. These checks could have failed if the filtering, aggregation or AI-assisted code were incorrect. | The recalculated median matched the displayed value, all observations satisfied the selected compute-band rule, and the displayed count matched the underlying rows. The AI-assisted implementation was retained after these checks. |
 | Yuchao Zong | Claude (Anthropic) | Development of the macro overview: training-compute growth | tabs/tab1.py; Macro Overview section of README.md | Claude wrote most of the Streamlit code for Tab 1, including the log-scale scatter plot with trend line, the yearly-median comparison of Open-Weight and Closed / API-Only models, the KPIs, the verification panel and the limitations text. It also helped draft the README section and the Part 1 presentation script. | Ran the tab locally on the real Epoch AI data and checked that the model counts matched DATA_DICTIONARY.md (351 models: 207 Open-Weight, 144 Closed / API-Only). Recalculated the displayed 2026 Open-Weight median (4.32 × 10²⁴ FLOP) from its 17 underlying models, and traced a displayed model back to raw_ai_models.csv to compare training FLOP and parameters. Visually reviewed the charts in the dark theme. These checks could have failed if the filtering, aggregation or lookup were wrong. | Counts, the recalculated median and the raw-record values all matched. The visual review found two real problems in the AI-generated version: model labels and the trend line were invisible in dark mode, and the cumulative growth was shown with false precision (×3,298,754). Both were fixed before committing. |
-| [Member 2] | [AI TOOL] | [SUBSTANTIVE USE] | [FILE / SECTION] | [WHAT AI HELPED WITH] | [SPECIFIC CHECK THAT COULD HAVE FAILED] | [RESULT OF CHECK] |
+| Qi Wang | Claude (Anthropic) | Development of User Story 1: compute vs capability; main app integration | `tabs/tab2.py`; `app.py`; `data/metadata.json` output in `prepared_data.py`; US1 section of README.md | Claude helped write the Streamlit/Plotly code for the compute-vs-score scatter with trend line, the compute-band box plot, the KPIs, the deviation tables and the verification panel. It also made the agreed layout changes (insight above the charts, deviation tables collapsed, visible verification, band medians and labelled scores printed on the charts), updated `app.py` to show data coverage and the last-refreshed date, and helped draft the README section. Analytical choices (GPQA Diamond only, log₁₀ compute, at least five results per band, best-version robustness check) were mine. | Ran the full app headlessly on the real data with Streamlit AppTest under both units of analysis. Recomputed the 10²⁴–10²⁵ FLOP band (45 results, 26.96%–91.67%) and confirmed the plotted box matches. Traced DeepSeek V4 Flash 0731 (run `EDFusDaaFkh5n2MqKNxMBD`) to `raw_benchmarks.csv`: raw 0.910354 × 100 should equal the displayed 91.04%, and the FLOP (2.496 × 10²⁴) should match exactly. Re-ran `prepared_data.py` from the raw files and compared the outputs with the committed processed files. These checks could have failed if the filtering, band assignment, score conversion, raw lookup or pipeline were wrong. | All checks matched, and the regenerated `ai_models.csv`, `benchmarks.csv` and `gpqa.csv` were identical to the committed files. Review found one AI-introduced bug: the takeaway box printed the release date twice for models whose names already contain one ("GPT-4 (Jun 2023) (Jun 2023)"). It was fixed before committing. |
 | [Member 4] | [AI TOOL] | [SUBSTANTIVE USE] | [FILE / SECTION] | [WHAT AI HELPED WITH] | [SPECIFIC CHECK THAT COULD HAVE FAILED] | [RESULT OF CHECK] |
 | **Xingqi Zhang** | ChatGPT by OpenAI | Development and debugging of User Story 3B: resource-efficient model choices | `tabs/tab5.py`; US3B README documentation | ChatGPT assisted with Streamlit code, interactive filters, a ranked dot plot, Pareto-efficient model identification, source verification and debugging. | Ran the dashboard locally using Epoch AI GPQA data. Checked that the raw score of 0.60795455 for gpt-oss-20b converts to 60.80%, and that the raw and processed training compute both equal 5.49e23 FLOP. These checks could have failed if the data lookup or conversion was incorrect. | The score conversion and compute values matched the original benchmark record. The dashboard ran successfully and was committed to GitHub. |
 
@@ -203,5 +203,37 @@ The main chart is a scatter plot of every model on a logarithmic compute axis wi
 - Reviewed the rendered charts. This found two problems in the AI-generated code: labels and the trend line were invisible in the dark theme, and the cumulative growth was displayed with false precision (×3,298,754 instead of about 3.3 million times). Both were corrected.
 
 These checks could have failed if the filtering, aggregation, raw-record lookup or display formatting were wrong. I remain responsible for the final code and the claims shown in the tab.
+
+## Member-Specific AI Use — Qi Wang (User Story 1 and main app)
+
+### Project contribution
+
+I was responsible for User Story 1 (`tabs/tab2.py`), which compares measured GPQA Diamond capability with training compute, and for the main app (`app.py`) that integrates the five tabs, together with deployment.
+
+### How AI was used
+
+Claude (Anthropic) was used as a coding and writing assistant. It helped write the Streamlit and Plotly code for the tab, made the layout changes agreed in the group so the tab follows the same structure as the others, updated `app.py` to show data coverage and a "Last refreshed" date read from `data/metadata.json` (written by `prepared_data.py`), and helped draft the US1 section of the README.
+
+The analytical rules in the final tab are:
+
+- use measured GPQA Diamond results with disclosed positive training compute only (93 of 316), with nothing imputed;
+- fit an ordinary least-squares trend of score on log₁₀(training FLOP) and report a Spearman rank correlation;
+- measure consistency as the score range within one-order-of-magnitude compute bands that contain at least five results;
+- offer a best-version-per-model view so repeated evaluations of one model do not drive the result; and
+- present the results as an association, not a causal effect.
+
+### Visualisation decision
+
+The main chart is a scatter plot on a logarithmic compute axis with a fitted trend line, supported by a box plot of scores within each compute band. A bar chart of average score per band was rejected as the main view because averages would hide the spread between models with comparable compute, which is the point of the user story.
+
+### Verification
+
+- Ran the whole app headlessly with Streamlit AppTest on the real data, under both units of analysis, with no errors.
+- Recomputed the 10²⁴–10²⁵ FLOP band from its 45 underlying results (26.96%–91.67%, median 65.34%); the plotted box matched.
+- Traced DeepSeek V4 Flash 0731 to `data/raw_benchmarks.csv` by run ID: the raw score of 0.910354 converts to the displayed 91.04%, and the training FLOP matches exactly.
+- Re-ran `prepared_data.py` from the raw files; the regenerated processed files were identical to the committed ones.
+- Review found one AI-introduced bug (a release date printed twice in the takeaway box), which was fixed.
+
+These checks could have failed if the filtering, band assignment, score conversion, raw-record lookup or data pipeline were wrong. I remain responsible for the final code and the claims shown in the tab.
 
 ## Responsibility for Final Outputs
