@@ -244,7 +244,58 @@ This user story is explored through two complementary views:
 
 #### User Story 3A — Compute required to reach a capability level
 
-[TO COMPLETE BY TAB 4 OWNER]
+##### Objective
+
+This view helps an AI Infrastructure Lead judge whether a cheaper-to-train alternative is likely to exist for the capability they need. The user picks a GPQA Diamond level, and the tab shows which model reached it first, which model has since reached it with the **least reported training compute**, and how long that took.
+
+##### Data and Methodology
+
+The analysis uses `data/gpqa.csv` (Epoch AI — Capabilities & Benchmarking). Of the 316 GPQA Diamond results, 93 have positive reported training compute; these cover 72 models released between March 2023 and September 2026. Missing compute is excluded, not imputed.
+
+Each model is represented by its best-scoring GPQA run (the same rule as User Story 1), because different evaluated versions of one model share one training-compute value. For a chosen level *L*:
+
+- qualifying models are those scoring at least *L*, ordered by release date;
+- a model sets a **record** when its training compute is lower than that of every earlier qualifying model; and
+- the **reduction factor** is the compute of the first model to reach *L* divided by the lowest compute of any model that has reached *L*.
+
+Levels start at 40% because random guessing on GPQA Diamond scores 25%.
+
+##### Visualisation Design
+
+- **Chart 1 (change over time):** every model's training compute (log scale) against release date, with a green step line showing the lowest compute that has reached the chosen level so far. Record-setting models are labelled with their name, compute and score, so values can be read without hovering.
+- **Chart 2 (magnitude):** a dumbbell chart on a log scale comparing, for each level from 40% to 95%, the compute of the first model to reach it with the least compute that has reached it since. The length of each bar is the size of the reduction.
+
+A grouped bar chart was considered for chart 2 but rejected: compute spans roughly 10²³ to 10²⁷ FLOP, so on a linear axis the smaller models' bars would be invisible, and bars on a log axis do not start at zero, so their length would mislead. The dumbbell avoids both problems.
+
+Colours follow the colour-blind-safe Okabe-Ito palette used across the app, and open-weight and closed models also differ by marker shape.
+
+##### Interactions
+
+- **Capability-level slider** (40–95% GPQA Diamond): updates the KPIs, the insight box, chart 1 and the verification list.
+- **Access filter** (all models / open-weight only / closed or API-only): updates every view, including chart 2.
+- If no model reaches the chosen level under the filter (for example, an open-weight model at 95%), the tab shows a message explaining why instead of an empty chart.
+
+##### Key Finding
+
+At the default level of 80%, **Grok 4** first reached it in July 2025 with 5.0 × 10²⁶ FLOP. **DeepSeek V4 Flash 0731** reached the same level 13 months later with 2.5 × 10²⁴ FLOP: about **200 times less training compute**.
+
+Across the seven levels compared (all models), a later model reached the same score with less compute at six levels, between 3.9× and 200× less, with a median gap of about 10 months. The highest level (≥ 95%), however, has only been reached by GPT-6 Astra, with 9.4 × 10²⁶ FLOP. In this data, **new top capability arrives with large compute first, and efficiency follows**.
+
+These are observed associations among models with published compute, not evidence of why a later model needed less compute.
+
+##### Verification
+
+The section "3 · Verify a displayed value" traces any record-setting model from the tab back to `data/raw_benchmarks.csv` by benchmark run ID, and checks that the raw score × 100 equals the displayed score and that the training FLOP is identical.
+
+For example, Grok 4 (run ID `A85Zfq2qguE4X9xXBweBHP`) has a raw score of 0.87 and training compute of 5 × 10²⁶ FLOP in `raw_benchmarks.csv`, matching the displayed 87% and 5.0 × 10²⁶ FLOP. Dividing its compute by DeepSeek V4 Flash 0731's raw value (2.496 × 10²⁴ FLOP) gives 200.3, which matches the displayed reduction.
+
+##### Limitations
+
+- The analysis cannot show *why* a model needed less compute (better data, distillation, architecture or post-training).
+- Distilled models report only their own training FLOP, not the compute of the larger model they learned from.
+- Training compute says nothing about inference cost, latency or price.
+- Many GPQA results, often from closed labs, have no published compute, so some levels may have been reached earlier or more cheaply than shown.
+- GPQA Diamond measures graduate-level science questions only, not all capabilities.
 
 #### User Story 3B — Resource-efficient model choices
 
@@ -432,7 +483,7 @@ A full Data & AI Disclosure is provided in:
 | Yuchao Zong               | Macro overview (Tab 1): training-compute growth analysis, visualisation, verification and README section |
 | Qi Wang                   | User Story 1 (Tab 2): compute-vs-capability analysis, visualisation and verification; main app (`app.py`) integration, refresh metadata and deployment |
 | Nguyen Thao Nhi Trường    | Project framing and user-story structure; GPQA data preparation; User Story 2 analysis, visualisation and verification |
-| [Member 4]                | [TO COMPLETE]                                                                                                          |
+| Santosh Pandit            | User Story 3A (Tab 4): compute needed to reach a capability level — analysis, record and dumbbell charts, verification panel, layout alignment and README section |
 | Xingqi Zhang | User Story 3B (Tab 5): resource-efficient AI model comparison, interactive Streamlit dashboard development, GPQA Diamond model ranking, Pareto-efficient candidate identification, source-data verification, testing and debugging; US3B README documentation and AI provenance disclosure. |
 
 ---
