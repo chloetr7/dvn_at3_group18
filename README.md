@@ -433,7 +433,7 @@ A full Data & AI Disclosure is provided in:
 | Qi Wang                   | User Story 1 (Tab 2): compute-vs-capability analysis, visualisation and verification; main app (`app.py`) integration, refresh metadata and deployment |
 | Nguyen Thao Nhi Trường    | Project framing and user-story structure; GPQA data preparation; User Story 2 analysis, visualisation and verification |
 | [Member 4]                | [TO COMPLETE]                                                                                                          |
-| [Member 5, if applicable] | [TO COMPLETE]                                                                                                          |
+| Xingqi Zhang | User Story 3B (Tab 5): resource-efficient AI model comparison, interactive Streamlit dashboard development, GPQA Diamond model ranking, Pareto-efficient candidate identification, source-data verification, testing and debugging; US3B README documentation and AI provenance disclosure. |
 
 ---
 
