@@ -71,14 +71,17 @@ raw_benchmarks.csv
 
 **Dataset:** Epoch AI — Capabilities & Benchmarking export  
 **Source:** Epoch AI  
-**Source URL:** https://epoch.ai/benchmarks/use-this-data  
+**Source URL:** [https://epoch.ai/benchmarks/use-this-data](https://epoch.ai/benchmarks/use-this-data)  
 **Licence:** Epoch AI data is available under Creative Commons Attribution. Benchmark questions/answers and externally sourced benchmark records may retain the original creators' licences.  
 **Purpose:** Source of measured benchmark performance and model-version metadata for capability analysis.
 
 **Rows in source sample:** 1,765  
 **Columns in source sample:** 65  
+**Primary key:** `id_runs`  
 **Primary identifiers used:** `id_runs`, `id_model_version`  
-**Measured score field used:** `Best score (across scorers)`
+**Measured score field used:** `Best score (across scorers)`  
+**Time coverage:** 2023-03-14 to 2026-10-15  
+**Latest observation:** 2026-10-15
 
 ### Source columns used downstream
 
