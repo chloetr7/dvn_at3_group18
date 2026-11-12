@@ -439,12 +439,12 @@ streamlit run app.py
 │   ├── raw_benchmarks.csv
 │   ├── ai_models.csv
 │   ├── benchmarks.csv
-│   └── gpqa.csv
+│   ├── gpqa.csv
+│   └── metadata.json
 │
 └── AI_DISCLOSURE.md
 ```
 
-Adjust this tree if the final repository structure differs.
 
 ---
 
