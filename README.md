@@ -490,15 +490,11 @@ A full Data & AI Disclosure is provided in:
 
 ## Data Coverage and Refresh
 
-**Data coverage:** through 09 September 2026
-**Last refreshed:** generated when the data-preparation pipeline is run.
+- **Epoch AI Notable AI Models:** 01 February 2018 – 09 September 2026
+- **GPQA Diamond:** 14 March 2023 – 15 October 2026
 
-The **data coverage date** refers to the latest observation contained in the source data.
+**Last refreshed:** 10 November 2026.
 
-The **last refreshed date** should refer to when `prepared_data.py` most recently regenerated the processed datasets. It should not simply use the current time whenever `app.py` runs unless the app itself also refreshes the source data and rebuilds the processed files during that run.
+The data coverage dates refer to the release dates represented in the processed analytical datasets.
 
-A recommended implementation is for `prepared_data.py` to write the refresh timestamp to a small metadata file, for example:
-
-`data/metadata.json`
-
-and for `app.py` to read and display that timestamp.
+The refresh date records when `prepared_data.py` most recently regenerated the processed datasets. The pipeline writes this timestamp to `data/metadata.json`, and `app.py` reads the committed metadata file to display the refresh date on the dashboard.
