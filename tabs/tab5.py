@@ -114,7 +114,10 @@ def _source_check(row: pd.Series) -> None:
             st.warning("Original `data/raw_benchmarks.csv` is not present here; verify against the group repository.")
             return
 
-        raw = pd.read_csv(raw_path, low_memory=False)
+        @st.cache_data(show_spinner=False)
+        def load_raw_benchmarks(path: str) -> pd.DataFrame:
+            return pd.read_csv(path, low_memory=False)
+        raw = load_raw_benchmarks(str(raw_path))
         if "id_runs" not in raw.columns:
             st.warning("The raw file has no `id_runs` column. Check the preprocessing script.")
             return
