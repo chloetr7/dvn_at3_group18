@@ -269,3 +269,4 @@ Chart 2 is a dumbbell chart on a logarithmic compute axis. A grouped bar chart w
 These checks could have failed if the run lookup, score conversion, best-run rule, record logic or display formatting were wrong. I remain responsible for the final code and the claims shown in the tab.
 
 ## Responsibility for Final Outputs
+All team members remain responsible for the final submitted work. Generative AI outputs were treated as development suggestions rather than authoritative evidence. Final analytical claims were checked against the project datasets, underlying observations and reproducible calculations before inclusion in the application.
