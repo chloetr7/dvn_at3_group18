@@ -7,10 +7,7 @@ Group 18
 
 **Repository:** [https://github.com/chloetr7/dvn_at3_group18](https://github.com/chloetr7/dvn_at3_group18)
 
-**Assessed version:** [ADD FINAL COMMIT HASH OR RELEASE TAG AFTER THE GROUP FREEZES THE SUBMISSION VERSION]
-
-> The assessed version identifies the exact GitHub state that should be marked.
-> Example: commit `a1b2c3d` or release tag `v1.0-final`.
+**Assessed version:** release tag `v1.0-final`
 
 ---
 
@@ -482,7 +479,7 @@ A full Data & AI Disclosure is provided in:
 | ------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
 | Yuchao Zong               | Macro overview (Tab 1): training-compute growth analysis, visualisation, verification and README section |
 | Qi Wang                   | User Story 1 (Tab 2): compute-vs-capability analysis, visualisation and verification; main app (`app.py`) integration, refresh metadata and deployment |
-| Nguyen Thao Nhi Trường    | Project framing and user-story structure; GPQA data preparation; User Story 2 analysis, visualisation and verification |
+| Nguyen Thao Nhi Truong    | Project framing and user-story structure; GPQA data preparation; User Story 2 analysis, visualisation and verification; cross-tab layout and consistency review; README, AI disclosure and final submission QA |
 | Santosh Pandit            | User Story 3A (Tab 4): compute needed to reach a capability level — analysis, record and dumbbell charts, verification panel, layout alignment and README section |
 | Xingqi Zhang | User Story 3B (Tab 5): resource-efficient AI model comparison, interactive Streamlit dashboard development, GPQA Diamond model ranking, Pareto-efficient candidate identification, source-data verification, testing and debugging; US3B README documentation and AI provenance disclosure. |
 
