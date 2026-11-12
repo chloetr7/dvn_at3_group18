@@ -158,7 +158,7 @@ def _source_check(row: pd.Series) -> None:
 
 def render(df: Optional[pd.DataFrame] = None) -> None:
     """Render US3B within the team app. Optionally pass the team's GPQA dataframe."""
-    st.header("US3B · Resource-efficient model choices")
+    st.header("User Story 3B · Resource-efficient model choices")
     st.write(
         "**Decision question:** Which measured models meet a minimum GPQA Diamond "
         "capability requirement with comparatively less *training* compute?"
