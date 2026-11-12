@@ -1,5 +1,5 @@
 """
-prepare_data.py
+prepared_data.py
 
 Reproducible preprocessing for Assignment 3:
 Topic 1 — Compute and algorithms.
